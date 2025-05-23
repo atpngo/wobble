@@ -8,7 +8,7 @@ source venv/bin/activate
 ```
 
 #### 2. Install dependencies
-```
+``
 pip install -r requirements.txt
 ```
 
@@ -31,3 +31,9 @@ python3 build.py --build-only
 cd simulation
 python3 build.py --no-build
 ```
+
+
+
+## TO-DOs
+- [ ] Embedded software
+- [ ] Telemetry? 

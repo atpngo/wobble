@@ -3,14 +3,27 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/portmacro.h>
 
-const int POT_SIGNAL_PIN = 36;
+// define your mux (must be unlocked at start)
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
+// optional: make encoderValue volatile if it's shared with the ISR
+volatile int encoderValue = 0;
+volatile uint8_t lastEncoded = 0;
+
 const int LEFT_SW = 12;  // blue
 const int LEFT_Y = 14;   // white
 const int LEFT_X = 27;   // gray
 const int RIGHT_SW = 26; // white
 const int RIGHT_Y = 25;  // green
 const int RIGHT_X = 33;  // orange
+
+// Encoder
+const int ENC_SW = 13; // gray
+const int ENC_CLK = 0; // yellow
+const int ENC_DT = 4;  // green
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -20,9 +33,27 @@ const int RIGHT_X = 33;  // orange
 #define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-float floatMap(float x, float in_min, float in_max, float out_min, float out_max)
+void IRAM_ATTR handleEncoder()
 {
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    portENTER_CRITICAL_ISR(&mux);
+    uint8_t MSB = digitalRead(ENC_CLK);
+    uint8_t LSB = digitalRead(ENC_DT);
+    uint8_t encoded = (MSB << 1) | LSB;
+    uint8_t sum = (lastEncoded << 2) | encoded;
+    // clockwise steps
+    if (sum == 0b1101 || sum == 0b0100 ||
+        sum == 0b0010 || sum == 0b1011)
+    {
+        encoderValue++;
+    }
+    // counter-clockwise steps
+    else if (sum == 0b1110 || sum == 0b0111 ||
+             sum == 0b0001 || sum == 0b1000)
+    {
+        encoderValue--;
+    }
+    lastEncoded = encoded;
+    portEXIT_CRITICAL_ISR(&mux);
 }
 
 void setup()
@@ -32,6 +63,18 @@ void setup()
     pinMode(LEFT_SW, INPUT_PULLUP);
     pinMode(RIGHT_SW, INPUT_PULLUP);
     analogSetAttenuation(ADC_11db);
+
+    // Enable encoder inputs
+    pinMode(ENC_DT, INPUT_PULLUP);
+    pinMode(ENC_CLK, INPUT_PULLUP);
+    pinMode(ENC_SW, INPUT_PULLUP);
+
+    // read initial state so lastEncoded starts correctly
+    lastEncoded = (digitalRead(ENC_CLK) << 1) | digitalRead(ENC_DT);
+
+    // attach on both edges of both channels
+    attachInterrupt(digitalPinToInterrupt(ENC_CLK), handleEncoder, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENC_DT), handleEncoder, CHANGE);
 
     // initialize the OLED object
     if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
@@ -53,15 +96,6 @@ void setup()
 
 void loop()
 {
-    // put your main code here, to run repeatedly:
-    int analogValue = analogRead(36);
-    // Rescale to potentiometer's voltage (from 0V to 3.3V):
-    float voltage = floatMap(analogValue, 0, 4095, 0, 3.3);
-    // Serial.print("Analog: ");
-    // Serial.print(analogValue);
-    // Serial.print(", Voltage: ");
-    // Serial.println(voltage);
-
     // Serial.print("[LEFT] X: ");
     // Serial.print(analogRead(LEFT_X)); // print the value of VRX
     // Serial.print("|Y: ");
@@ -81,7 +115,8 @@ void loop()
     display.setCursor(0, 28);
 
     // use print() instead of println() so it won’t advance down a line
-    display.print(voltage, 2); // ‘2’ is number of decimals
+    display.println(encoderValue / 4);
+    display.println(digitalRead(ENC_SW));
 
     display.display(); // send buffer to the screen
     delay(50);

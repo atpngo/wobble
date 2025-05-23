@@ -7,3 +7,5 @@
 *.so
 **/build
 .vscode
+venv
+robot-software

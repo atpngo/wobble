@@ -8,11 +8,11 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "/Users/andyngo/Desktop/SBR/wireless-controller/include",
-                "/Users/andyngo/Desktop/SBR/wireless-controller/src",
-                "/Users/andyngo/Desktop/SBR/wireless-controller/.pio/libdeps/esp32dev/Adafruit SSD1306",
-                "/Users/andyngo/Desktop/SBR/wireless-controller/.pio/libdeps/esp32dev/Adafruit GFX Library",
-                "/Users/andyngo/Desktop/SBR/wireless-controller/.pio/libdeps/esp32dev/Adafruit BusIO",
+                "/Users/andyngo/Desktop/wobble/wireless-controller/include",
+                "/Users/andyngo/Desktop/wobble/wireless-controller/src",
+                "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit SSD1306",
+                "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit GFX Library",
+                "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit BusIO",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/newlib/platform_include",
@@ -328,11 +328,11 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "/Users/andyngo/Desktop/SBR/wireless-controller/include",
-                    "/Users/andyngo/Desktop/SBR/wireless-controller/src",
-                    "/Users/andyngo/Desktop/SBR/wireless-controller/.pio/libdeps/esp32dev/Adafruit SSD1306",
-                    "/Users/andyngo/Desktop/SBR/wireless-controller/.pio/libdeps/esp32dev/Adafruit GFX Library",
-                    "/Users/andyngo/Desktop/SBR/wireless-controller/.pio/libdeps/esp32dev/Adafruit BusIO",
+                    "/Users/andyngo/Desktop/wobble/wireless-controller/include",
+                    "/Users/andyngo/Desktop/wobble/wireless-controller/src",
+                    "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit SSD1306",
+                    "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit GFX Library",
+                    "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit BusIO",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/newlib/platform_include",
