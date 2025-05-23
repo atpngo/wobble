@@ -27,22 +27,36 @@ Display display;
 void setup()
 {
     Serial.begin(115200);
+    Serial.println("Setting attenuation...");
     analogSetAttenuation(ADC_11db);
 
-    left_joystick.init();
-    right_joystick.init();
+    Serial.println("Init left joystick...");
+    left_joystick.init(180, 190);
+    Serial.println("Init right joystick...");
+    right_joystick.init(220, 185);
+    Serial.println("Init encoder...");
     dial.init();
+    Serial.println("Init display...");
     display.init();
+    Serial.println("Done!");
 }
 
 void loop()
 {
     // clear buffer and reset cursor to top‐left (or wherever you like)
+    // Serial.print("Dial: ");
+    // Serial.print(dial.read());
+    // Serial.print(" | Pressed: ");
+    // Serial.println(dial.button_pressed());
     display.reset();
+    display.println(left_joystick.get_x());  // -180
+    display.println(left_joystick.get_y());  // -190
+    display.println(right_joystick.get_x()); // -220
+    display.println(right_joystick.get_y()); // -185
 
-    // use print() instead of println() so it won’t advance down a line
-    display.println(dial.read());
-    display.println(dial.button_pressed());
+    // // use print() instead of println() so it won’t advance down a line
+    // display.println(dial.read());
+    // display.println(dial.button_pressed());
 
     display.update();
     delay(50);

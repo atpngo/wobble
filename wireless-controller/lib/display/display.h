@@ -4,6 +4,7 @@
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
 #include <string>
+#include "util.h"
 
 class Display
 {
@@ -16,15 +17,11 @@ public:
     template <typename T>
     void println(T v)
     {
-        oled_.println(v);
+        oled_.println(approximate_to_zero(v, 1e-2));
     }
 
 private:
     Adafruit_SSD1306 oled_;
-    const int SCREEN_WIDTH = 128;
-    const int SCREEN_HEIGHT = 64;
-    const int OLED_RESET = -1;
-    const int SCREEN_ADDRESS = 0x3C;
 };
 
 #endif // DISPLAY_H

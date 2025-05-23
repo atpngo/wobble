@@ -1,5 +1,10 @@
 #include "display.h"
+#include <Arduino.h>
 #include <Wire.h>
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define SCREEN_ADDRESS 0x3C
 
 Display::Display() : oled_(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET)
 {

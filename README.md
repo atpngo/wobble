@@ -37,3 +37,11 @@ python3 build.py --no-build
 ## Acknowledgements
 The `imu` and `I2Cdev` libraries used in this project are largely based off of existing software written by Jeff Rowberg and maintainers of the [I2C Device Library](https://github.com/jrowberg/i2cdevlib)
 - see [original MPU6050 code here](https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050)
+
+```
+platformio run --target upload --upload-port /dev/cu.usbserial-0001 
+```
+
+```
+pio run
+```
