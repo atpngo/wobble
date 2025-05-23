@@ -1,5 +1,7 @@
 #include <Arduino.h>
+#include "imu.h"
 
+IMU imu;
 // Required Components
 // - top level robot
 // - motor class

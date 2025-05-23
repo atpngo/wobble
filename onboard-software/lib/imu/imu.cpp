@@ -47,7 +47,7 @@ void IMU::calibrate()
 void IMU::calculateAngles()
 {
     dataReady = mpu.dmpGetCurrentFIFOPacket(fifoBuffer);
-    if (dataReady && isReady())
+    if (dataReady && is_ready())
     { // Get the Latest packet
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetGravity(&gravity, &q);
@@ -55,9 +55,9 @@ void IMU::calculateAngles()
     }
 }
 
-float IMU::getAngle(OrientationDimension dimension)
+float IMU::get_angle(OrientationDimension dimension)
 {
-    if (dataReady && isReady())
+    if (dataReady && is_ready())
     {
         oldYPR[dimension] = degToRad(ypr[dimension]);
     }
@@ -66,15 +66,15 @@ float IMU::getAngle(OrientationDimension dimension)
 
 float IMU::get_yaw()
 {
-    return getAngle(YAW);
+    return get_angle(YAW);
 }
 
 float IMU::get_pitch()
 {
-    return getAngle(PITCH);
+    return get_angle(PITCH);
 }
 
 float IMU::get_roll()
 {
-    return getAngle(ROLL);
+    return get_angle(ROLL);
 }
