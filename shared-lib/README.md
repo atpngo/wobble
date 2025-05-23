@@ -1,0 +1,1 @@
+This directory holds common C++ libraries used across various programs (e.g. `simulation` and `onboard-software` rely on various controller libraries)
