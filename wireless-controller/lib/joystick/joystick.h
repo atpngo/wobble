@@ -4,7 +4,8 @@
 class Joystick
 {
 public:
-    Joystick(const int switch_pin, const int x_pin, const int y_pin);
+    Joystick(int switch_pin, int x_pin, int y_pin);
+    void init();
     float get_x();
     float get_y();
     bool button_pressed();

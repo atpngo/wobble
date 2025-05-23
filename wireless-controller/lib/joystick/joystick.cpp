@@ -7,6 +7,10 @@ Joystick::Joystick(int switch_pin,
                                 x_pin_(x_pin),
                                 y_pin_(y_pin)
 {
+}
+
+void Joystick::init()
+{
     pinMode(switch_pin_, INPUT_PULLUP);
 }
 

@@ -10,6 +10,7 @@
             "includePath": [
                 "/Users/andyngo/Desktop/wobble/wireless-controller/include",
                 "/Users/andyngo/Desktop/wobble/wireless-controller/src",
+                "/Users/andyngo/Desktop/wobble/wireless-controller/lib/joystick",
                 "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit SSD1306",
                 "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit GFX Library",
                 "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit BusIO",
@@ -284,7 +285,7 @@
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32-libs/esp32/dio_qspi/include",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/variants/esp32",
-                "/Users/andyngo/Desktop/wobble/wireless-controller/lib/joystick",
+                "/Users/andyngo/Desktop/wobble/wireless-controller/lib/encoder",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/AsyncUDP/src",
                 "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/BLE/src",
@@ -331,6 +332,7 @@
                 "path": [
                     "/Users/andyngo/Desktop/wobble/wireless-controller/include",
                     "/Users/andyngo/Desktop/wobble/wireless-controller/src",
+                    "/Users/andyngo/Desktop/wobble/wireless-controller/lib/joystick",
                     "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit SSD1306",
                     "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit GFX Library",
                     "/Users/andyngo/Desktop/wobble/wireless-controller/.pio/libdeps/esp32dev/Adafruit BusIO",
@@ -605,7 +607,7 @@
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32-libs/esp32/dio_qspi/include",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/variants/esp32",
-                    "/Users/andyngo/Desktop/wobble/wireless-controller/lib/joystick",
+                    "/Users/andyngo/Desktop/wobble/wireless-controller/lib/encoder",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/AsyncUDP/src",
                     "/Users/andyngo/.platformio/packages/framework-arduinoespressif32/libraries/BLE/src",

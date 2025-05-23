@@ -6,6 +6,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/portmacro.h>
 #include "joystick.h"
+#include "encoder.h"
 // define your mux (must be unlocked at start)
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -25,8 +26,9 @@ const int ENC_CLK = 0; // yellow
 const int ENC_DT = 4;  // green
 
 // Objects
-Joystick left(LEFT_SW, LEFT_X, LEFT_Y);
-Joystick right(RIGHT_SW, RIGHT_X, RIGHT_Y);
+Joystick left_joystick(LEFT_SW, LEFT_X, LEFT_Y);
+Joystick right_joystick(RIGHT_SW, RIGHT_X, RIGHT_Y);
+Encoder dial(ENC_CLK, ENC_DT, ENC_SW);
 
 // Encoder variables
 volatile int encoderValue = 0;
@@ -40,45 +42,14 @@ volatile uint8_t lastEncoded = 0;
 #define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-void IRAM_ATTR handleEncoder()
-{
-    portENTER_CRITICAL_ISR(&mux);
-    uint8_t MSB = digitalRead(ENC_CLK);
-    uint8_t LSB = digitalRead(ENC_DT);
-    uint8_t encoded = (MSB << 1) | LSB;
-    uint8_t sum = (lastEncoded << 2) | encoded;
-    // clockwise steps
-    if (sum == 0b1101 || sum == 0b0100 ||
-        sum == 0b0010 || sum == 0b1011)
-    {
-        encoderValue++;
-    }
-    // counter-clockwise steps
-    else if (sum == 0b1110 || sum == 0b0111 ||
-             sum == 0b0001 || sum == 0b1000)
-    {
-        encoderValue--;
-    }
-    lastEncoded = encoded;
-    portEXIT_CRITICAL_ISR(&mux);
-}
-
 void setup()
 {
     Serial.begin(115200);
     analogSetAttenuation(ADC_11db);
 
-    // Enable encoder inputs
-    pinMode(ENC_DT, INPUT_PULLUP);
-    pinMode(ENC_CLK, INPUT_PULLUP);
-    pinMode(ENC_SW, INPUT_PULLUP);
-
-    // read initial state so lastEncoded starts correctly
-    lastEncoded = (digitalRead(ENC_CLK) << 1) | digitalRead(ENC_DT);
-
-    // attach on both edges of both channels
-    attachInterrupt(digitalPinToInterrupt(ENC_CLK), handleEncoder, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ENC_DT), handleEncoder, CHANGE);
+    left_joystick.init();
+    right_joystick.init();
+    dial.init();
 
     // initialize the OLED object
     if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
@@ -105,8 +76,8 @@ void loop()
     display.setCursor(0, 28);
 
     // use print() instead of println() so it won’t advance down a line
-    display.println(encoderValue / 4);
-    display.println(digitalRead(ENC_SW));
+    display.println(dial.read());
+    display.println(dial.button_pressed());
 
     display.display(); // send buffer to the screen
     delay(50);
