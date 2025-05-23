@@ -5,25 +5,32 @@
 #include <Adafruit_SSD1306.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/portmacro.h>
-
+#include "joystick.h"
 // define your mux (must be unlocked at start)
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
-// optional: make encoderValue volatile if it's shared with the ISR
-volatile int encoderValue = 0;
-volatile uint8_t lastEncoded = 0;
-
+/*
+ *  PIN DEFINITIONS
+ */
+// Switches
 const int LEFT_SW = 12;  // blue
 const int LEFT_Y = 14;   // white
 const int LEFT_X = 27;   // gray
 const int RIGHT_SW = 26; // white
 const int RIGHT_Y = 25;  // green
 const int RIGHT_X = 33;  // orange
-
 // Encoder
 const int ENC_SW = 13; // gray
 const int ENC_CLK = 0; // yellow
 const int ENC_DT = 4;  // green
+
+// Objects
+Joystick left(LEFT_SW, LEFT_X, LEFT_Y);
+Joystick right(RIGHT_SW, RIGHT_X, RIGHT_Y);
+
+// Encoder variables
+volatile int encoderValue = 0;
+volatile uint8_t lastEncoded = 0;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -58,10 +65,7 @@ void IRAM_ATTR handleEncoder()
 
 void setup()
 {
-    // put your setup code here, to run once:
     Serial.begin(115200);
-    pinMode(LEFT_SW, INPUT_PULLUP);
-    pinMode(RIGHT_SW, INPUT_PULLUP);
     analogSetAttenuation(ADC_11db);
 
     // Enable encoder inputs
@@ -96,20 +100,6 @@ void setup()
 
 void loop()
 {
-    // Serial.print("[LEFT] X: ");
-    // Serial.print(analogRead(LEFT_X)); // print the value of VRX
-    // Serial.print("|Y: ");
-    // Serial.print(analogRead(LEFT_Y)); // print the value of VRX
-    // Serial.print("|Z: ");
-    // Serial.println(digitalRead(LEFT_SW)); // print the value of SW
-
-    // Serial.print("[RIGHT] X: ");
-    // Serial.print(analogRead(RIGHT_X)); // print the value of VRX
-    // Serial.print("|Y: ");
-    // Serial.print(analogRead(RIGHT_Y)); // print the value of VRX
-    // Serial.print("|Z: ");
-    // Serial.println(digitalRead(RIGHT_SW)); // print the value of SW
-
     // clear buffer and reset cursor to top‐left (or wherever you like)
     display.clearDisplay();
     display.setCursor(0, 28);
