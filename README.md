@@ -39,7 +39,7 @@ The `imu` and `I2Cdev` libraries used in this project are largely based off of e
 - see [original MPU6050 code here](https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050)
 
 ```
-platformio run --target upload --upload-port /dev/cu.usbserial-0001 
+pio run --target upload --upload-port /dev/cu.usbserial-0001 
 ```
 
 ```

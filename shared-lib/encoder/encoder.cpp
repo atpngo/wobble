@@ -1,8 +1,6 @@
 #include "encoder.h"
 #include <Arduino.h>
 
-Encoder *Encoder::instance_ = nullptr;
-
 Encoder::Encoder(int clock_pin,
                  int dt_pin,
                  int switch_pin) : clock_pin_(clock_pin),
@@ -11,15 +9,24 @@ Encoder::Encoder(int clock_pin,
 {
 }
 
+Encoder::Encoder(int clock_pin,
+                 int dt_pin) : clock_pin_(clock_pin),
+                               dt_pin_(dt_pin),
+                               switch_pin_(-1)
+{
+}
+
 void Encoder::init()
 {
-    instance_ = this;
     pinMode(clock_pin_, INPUT_PULLUP);
     pinMode(dt_pin_, INPUT_PULLUP);
-    pinMode(switch_pin_, INPUT_PULLUP);
+    if (switch_pin_ != -1)
+    {
+        pinMode(switch_pin_, INPUT_PULLUP);
+    }
     last_encoded_ = (digitalRead(clock_pin_) << 1) | digitalRead(dt_pin_);
-    attachInterrupt(digitalPinToInterrupt(clock_pin_), isr, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(dt_pin_), isr, CHANGE);
+    attachInterruptArg(digitalPinToInterrupt(clock_pin_), Encoder::isr_clk, this, CHANGE);
+    attachInterruptArg(digitalPinToInterrupt(dt_pin_), Encoder::isr_dt, this, CHANGE);
 }
 
 int Encoder::read()
@@ -33,13 +40,20 @@ int Encoder::read()
 
 bool Encoder::button_pressed()
 {
+    if (switch_pin_ == -1)
+        return false;
+
     return digitalRead(switch_pin_) == LOW;
 }
 
-void IRAM_ATTR Encoder::isr()
+void IRAM_ATTR Encoder::isr_clk(void *arg)
 {
-    if (instance_)
-        instance_->handle_interrupt();
+    static_cast<Encoder *>(arg)->handle_interrupt();
+}
+
+void IRAM_ATTR Encoder::isr_dt(void *arg)
+{
+    static_cast<Encoder *>(arg)->handle_interrupt();
 }
 
 void IRAM_ATTR Encoder::handle_interrupt()
