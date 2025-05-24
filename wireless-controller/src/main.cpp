@@ -1,8 +1,9 @@
 #include <Arduino.h>
+#include <Wire.h>
 #include "joystick.h"
 #include "encoder.h"
 #include "display.h"
-
+#include "communication.h"
 /*
  *  PIN DEFINITIONS
  */
@@ -23,22 +24,41 @@ Joystick left_joystick(LEFT_SW, LEFT_X, LEFT_Y);
 Joystick right_joystick(RIGHT_SW, RIGHT_X, RIGHT_Y);
 Encoder dial(ENC_CLK, ENC_DT, ENC_SW);
 Display display;
+Communication socket;
+uint8_t peer[6] = {0xEC, 0x64, 0xC9, 0x85, 0x70, 0x14};
+
+volatile int count = 0;
+
+void handleIncoming(const esp_now_recv_info_t *esp_now_info, const Packet &pkt)
+{
+    if (pkt.type == Message::Command)
+    {
+        // parse pkt.payload into your command enum/struct
+    }
+    else if (pkt.type == Message::Telemetry)
+    {
+        count++;
+        Serial.println("got message");
+    }
+}
 
 void setup()
 {
+    Wire.begin();
     Serial.begin(115200);
-    Serial.println("Setting attenuation...");
     analogSetAttenuation(ADC_11db);
+    Serial.println("init socket");
+    socket.init();
+    socket.addPeer(peer);
+    socket.onReceive(handleIncoming);
+    Serial.println("done socket");
 
-    Serial.println("Init left joystick...");
     left_joystick.init(180, 190);
-    Serial.println("Init right joystick...");
     right_joystick.init(220, 185);
-    Serial.println("Init encoder...");
     dial.init();
-    Serial.println("Init display...");
     display.init();
-    Serial.println("Done!");
+    display.reset();
+    Serial.println("done");
 }
 
 void loop()
@@ -48,16 +68,16 @@ void loop()
     // Serial.print(dial.read());
     // Serial.print(" | Pressed: ");
     // Serial.println(dial.button_pressed());
-    display.reset();
-    display.println(left_joystick.get_x());  // -180
-    display.println(left_joystick.get_y());  // -190
-    display.println(right_joystick.get_x()); // -220
-    display.println(right_joystick.get_y()); // -185
+    // display.reset();
+    // display.println(left_joystick.get_x());  // -180
+    // display.println(left_joystick.get_y());  // -190
+    // display.println(right_joystick.get_x()); // -220
+    // display.println(right_joystick.get_y()); // -185
 
-    // // use print() instead of println() so it won’t advance down a line
-    // display.println(dial.read());
-    // display.println(dial.button_pressed());
+    // // // use print() instead of println() so it won’t advance down a line
+    // // display.println(dial.read());
+    // // display.println(dial.button_pressed());
 
-    display.update();
-    delay(50);
+    // display.update();
+    // delay(50);
 }
