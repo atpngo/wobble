@@ -13,14 +13,14 @@ enum class Command : uint8_t
     TURN_L,
     TURN_R
 };
+
+#pragma pack(push, 1)
 struct Telemetry
 {
-    int32_t left_enc, right_enc;
     float pitch;
+    int left_enc;
+    int right_enc;
 };
-
-// max size per ESP-NOW packet
-static constexpr size_t MAX_PAYLOAD_LEN = 250;
 
 // message types
 enum class Message : uint8_t
@@ -35,14 +35,14 @@ struct Packet
 {
     Message type;
     uint8_t len;
-    uint8_t payload[MAX_PAYLOAD_LEN];
-} __attribute__((packed));
+    float pitch;
+    uint8_t payload[100];
+};
+#pragma pack(pop)
 
 class Communication
 {
 public:
-    using RecvCallback = std::function<void(const esp_now_recv_info_t *info, const Packet &)>;
-
     // initialize WiFi + ESP-NOW
     void init();
 
@@ -56,13 +56,10 @@ public:
     void broadcast(const Packet &pkt);
 
     // set a callback for incoming packets
-    void onReceive(RecvCallback cb);
+    void onReceive(esp_now_recv_cb_t cb);
 
 private:
     std::vector<esp_now_peer_info_t> _peers;
-    RecvCallback _onRecv = nullptr;
-
-    static void _espnowRecv(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int len);
 };
 
 #endif // COMMUNICATION_H

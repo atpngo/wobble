@@ -18,6 +18,7 @@ Encoder::Encoder(int clock_pin,
 
 void Encoder::init()
 {
+    value_ = 0;
     pinMode(clock_pin_, INPUT_PULLUP);
     pinMode(dt_pin_, INPUT_PULLUP);
     if (switch_pin_ != -1)

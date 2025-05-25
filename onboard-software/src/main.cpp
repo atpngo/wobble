@@ -13,6 +13,8 @@ IMU imu;
 
 uint8_t peer[6] = {0xEC, 0x64, 0xC9, 0x85, 0x6F, 0x84};
 Communication socket;
+Packet in_;
+Packet out_;
 // Required Components
 // - top level robot
 // - motor class
@@ -63,19 +65,21 @@ void loop()
     // Serial.print(" | Y: ");
     // Serial.println(imu.get_yaw());
 
-    Packet p{};
-    p.type = Message::Telemetry;
+    out_.type = Message::Telemetry;
     Telemetry t{
+        .pitch = imu.get_pitch(),
         .left_enc = left_wheel_encoder.read(),
         .right_enc = right_wheel_encoder.read(),
-        .pitch = imu.get_pitch(),
     };
-    memcpy(p.payload, &t, sizeof(t));
-    p.len = sizeof(t);
-    socket.send(peer, p);
-    // Serial.print("L: ");
-    // Serial.print(left_wheel_encoder.read());
-    // Serial.print(" | R: ");
-    // Serial.println(right_wheel_encoder.read());
-    delay(100);
+    memcpy(out_.payload, &t, sizeof(t));
+    out_.len = sizeof(t);
+    out_.pitch = imu.get_pitch();
+    socket.send(peer, out_);
+    Serial.print("P: ");
+    Serial.print(t.pitch);
+    Serial.print(" | L: ");
+    Serial.print(t.left_enc);
+    Serial.print(" | R: ");
+    Serial.println(t.right_enc);
+    delay(1000);
 }

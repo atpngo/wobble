@@ -29,16 +29,42 @@ uint8_t peer[6] = {0xEC, 0x64, 0xC9, 0x85, 0x70, 0x14};
 
 volatile int count = 0;
 
-void handleIncoming(const esp_now_recv_info_t *esp_now_info, const Packet &pkt)
+Packet in_;
+Packet out_;
+Telemetry data_;
+void handleIncoming(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int len)
 {
-    if (pkt.type == Message::Command)
+    memcpy(&in_, data, len);
+    Serial.print("Received bytes: ");
+    if (in_.type == Message::Command)
     {
         // parse pkt.payload into your command enum/struct
     }
-    else if (pkt.type == Message::Telemetry)
+    else if (in_.type == Message::Telemetry)
     {
+        Serial.println("START ====");
+        for (int i = 0; i < 20; i++)
+        {
+            Serial.print("data[");
+            Serial.print(i);
+            Serial.print("] = ");
+            Serial.println(data[i]);
+        }
+        Serial.println("END ====");
+
         count++;
-        Serial.println("got message");
+        // Works fine when you pack it in the top level struct
+        Serial.print("P: ");
+        Serial.println(in_.pitch);
+
+        // when i memcpy the payload into a Telemetry object, it doesnt work
+        memcpy(&data_, in_.payload, sizeof(data_));
+        Serial.print("Pitch: ");
+        Serial.print(data_.pitch);
+        Serial.print(" | L: ");
+        Serial.print(data_.left_enc);
+        Serial.print(" | R: ");
+        Serial.println(data_.right_enc);
     }
 }
 
@@ -49,7 +75,14 @@ void setup()
     analogSetAttenuation(ADC_11db);
     Serial.println("init socket");
     socket.init();
-    socket.addPeer(peer);
+    if (!socket.addPeer(peer))
+    {
+        Serial.println("Failed to add peer");
+    }
+    else
+    {
+        Serial.println("Added peer.");
+    }
     socket.onReceive(handleIncoming);
     Serial.println("done socket");
 
@@ -58,11 +91,16 @@ void setup()
     dial.init();
     display.init();
     display.reset();
+    display.println(69);
+    display.update();
     Serial.println("done");
 }
 
 void loop()
 {
+    display.reset();
+    display.println(69);
+    display.update();
     // clear buffer and reset cursor to top‐left (or wherever you like)
     // Serial.print("Dial: ");
     // Serial.print(dial.read());

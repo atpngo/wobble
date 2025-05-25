@@ -1,24 +1,22 @@
 #include "communication.h"
 
-static Communication *_instance = nullptr;
-
 void Communication::init()
 {
     WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
+    Serial.print("MAC: ");
+    Serial.println(WiFi.macAddress());
     if (esp_now_init() != ESP_OK)
     {
         Serial.println("ESPNow init failed");
         return;
     }
-    _instance = this;
-    esp_now_register_recv_cb(_espnowRecv);
 }
 
 bool Communication::addPeer(const uint8_t *mac)
 {
     esp_now_peer_info_t p{};
     memcpy(p.peer_addr, mac, 6);
+    p.channel = 0;
     p.encrypt = false;
     if (esp_now_add_peer(&p) == ESP_OK)
     {
@@ -30,7 +28,7 @@ bool Communication::addPeer(const uint8_t *mac)
 
 bool Communication::send(const uint8_t *mac, const Packet &pkt)
 {
-    return esp_now_send(mac, (uint8_t *)&pkt, sizeof(Packet)) == ESP_OK;
+    return esp_now_send(mac, (uint8_t *)&pkt, pkt.len) == ESP_OK;
 }
 
 void Communication::broadcast(const Packet &pkt)
@@ -41,17 +39,7 @@ void Communication::broadcast(const Packet &pkt)
     }
 }
 
-void Communication::onReceive(RecvCallback cb)
+void Communication::onReceive(esp_now_recv_cb_t cb)
 {
-    _onRecv = cb;
-}
-
-void Communication::_espnowRecv(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int len)
-{
-    if (!_instance || len < (int)sizeof(Packet))
-        return;
-    Packet pkt;
-    memcpy(&pkt, data, sizeof(Packet));
-    if (_instance->_onRecv)
-        _instance->_onRecv(esp_now_info, pkt);
+    esp_now_register_recv_cb(cb);
 }
