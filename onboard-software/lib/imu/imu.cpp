@@ -1,6 +1,14 @@
 #include "imu.h"
 #include "util.h"
-
+#include <EEPROM.h>
+#define EEPROM_SIZE 32
+#define ADDR_CALIB_FLAG 0
+#define ADDR_X_GYRO_OFFSET 1 // each int16_t takes 2 bytes
+#define ADDR_Y_GYRO_OFFSET 3
+#define ADDR_Z_GYRO_OFFSET 5
+#define ADDR_X_ACCEL_OFFSET 7
+#define ADDR_Y_ACCEL_OFFSET 9
+#define ADDR_Z_ACCEL_OFFSET 11
 IMU::IMU()
 {
     dmpReady = false;
@@ -16,17 +24,60 @@ IMU::~IMU()
 
 void IMU::init()
 {
+    EEPROM.begin(EEPROM_SIZE);
+
     mpu.initialize();
     devStatus = mpu.dmpInitialize();
-    // Initialize offsets (might have to tweak these)
-    mpu.setXGyroOffset(220);
-    mpu.setYGyroOffset(76);
-    mpu.setZGyroOffset(-85);
-    mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
-
     if (devStatus == 0)
     {
-        calibrate();
+        // only calibrate once & store the results in EEPROM
+        if (EEPROM.read(ADDR_CALIB_FLAG) != 1)
+        {
+            Serial.println("Calibrating...");
+            // very first boot: run the slow routines
+            calibrate();
+
+            // grab offsets out of the MPU registers
+            int16_t xgo = mpu.getXGyroOffset();
+            int16_t ygo = mpu.getYGyroOffset();
+            int16_t zgo = mpu.getZGyroOffset();
+            int16_t xao = mpu.getXAccelOffset();
+            int16_t yao = mpu.getYAccelOffset();
+            int16_t zao = mpu.getZAccelOffset();
+
+            // write them to EEPROM
+            EEPROM.put(ADDR_X_GYRO_OFFSET, xgo);
+            EEPROM.put(ADDR_Y_GYRO_OFFSET, ygo);
+            EEPROM.put(ADDR_Z_GYRO_OFFSET, zgo);
+            EEPROM.put(ADDR_X_ACCEL_OFFSET, xao);
+            EEPROM.put(ADDR_Y_ACCEL_OFFSET, yao);
+            EEPROM.put(ADDR_Z_ACCEL_OFFSET, zao);
+            EEPROM.write(ADDR_CALIB_FLAG, 1);
+            EEPROM.commit();
+        }
+        else
+        {
+            Serial.println("Loading offsets from memory");
+            // subsequent boots: load & apply the stored offsets
+            int16_t xgo, ygo, zgo, xao, yao, zao;
+            EEPROM.get(ADDR_X_GYRO_OFFSET, xgo);
+            EEPROM.get(ADDR_Y_GYRO_OFFSET, ygo);
+            EEPROM.get(ADDR_Z_GYRO_OFFSET, zgo);
+            EEPROM.get(ADDR_X_ACCEL_OFFSET, xao);
+            EEPROM.get(ADDR_Y_ACCEL_OFFSET, yao);
+            EEPROM.get(ADDR_Z_ACCEL_OFFSET, zao);
+
+            mpu.setXGyroOffset(xgo);
+            mpu.setYGyroOffset(ygo);
+            mpu.setZGyroOffset(zgo);
+            mpu.setXAccelOffset(xao);
+            mpu.setYAccelOffset(yao);
+            mpu.setZAccelOffset(zao);
+
+            mpu.setDMPEnabled(true);
+            dmpReady = true;
+            packetSize = mpu.dmpGetFIFOPacketSize();
+        }
     }
 }
 

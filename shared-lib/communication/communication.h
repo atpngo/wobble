@@ -35,7 +35,6 @@ struct Packet
 {
     Message type;
     uint8_t len;
-    float pitch;
     uint8_t payload[100];
 };
 #pragma pack(pop)

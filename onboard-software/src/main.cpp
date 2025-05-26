@@ -22,25 +22,16 @@ Packet out_;
 
 // Control Loops
 // - 1 core for handling ESP-NOW communication
-// - - stuff to send from the robot
-// - - - setpoint, encoder, PID, etc.
 // - - stuff to send from transceiver to robot
 // - - - trim value (offset to modify setpoint), turn instructions, forward/back commands
 // - 1 core for handling balancing + wheel sync
 // - - - design high level policy/control system (agnostic of the controller)
-
-volatile int count = 0;
 
 void handleIncoming(const esp_now_recv_info_t *esp_now_info, const Packet &pkt)
 {
     if (pkt.type == Message::Command)
     {
         // parse pkt.payload into your command enum/struct
-    }
-    else if (pkt.type == Message::Telemetry)
-    {
-        count++;
-        Serial.println("got message");
     }
 }
 
@@ -58,12 +49,6 @@ void setup()
 void loop()
 {
     imu.calculateAngles();
-    // Serial.print("R: ");
-    // Serial.print(imu.get_roll());
-    // Serial.print(" | P: ");
-    // Serial.print(imu.get_pitch());
-    // Serial.print(" | Y: ");
-    // Serial.println(imu.get_yaw());
 
     out_.type = Message::Telemetry;
     Telemetry t{
@@ -73,13 +58,7 @@ void loop()
     };
     memcpy(out_.payload, &t, sizeof(t));
     out_.len = sizeof(t);
-    out_.pitch = imu.get_pitch();
     socket.send(peer, out_);
-    Serial.print("P: ");
-    Serial.print(t.pitch);
-    Serial.print(" | L: ");
-    Serial.print(t.left_enc);
-    Serial.print(" | R: ");
-    Serial.println(t.right_enc);
+
     delay(100);
 }

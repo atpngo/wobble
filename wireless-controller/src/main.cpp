@@ -27,8 +27,6 @@ Display display;
 Communication socket;
 uint8_t peer[6] = {0xEC, 0x64, 0xC9, 0x85, 0x70, 0x14};
 
-volatile int count = 0;
-
 Packet in_;
 Packet out_;
 Telemetry data_;
@@ -42,7 +40,6 @@ void handleIncoming(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     }
     else if (in_.type == Message::Telemetry)
     {
-        count++;
         memcpy(&data_, in_.payload, sizeof(data_));
         display.reset();
         display.printf("Pitch: %.2f\nL: %d  R: %d", data_.pitch, data_.left_enc, data_.right_enc);
