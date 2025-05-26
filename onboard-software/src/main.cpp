@@ -81,5 +81,5 @@ void loop()
     Serial.print(t.left_enc);
     Serial.print(" | R: ");
     Serial.println(t.right_enc);
-    delay(1000);
+    delay(100);
 }

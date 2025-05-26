@@ -35,3 +35,28 @@ void Display::update()
 {
     oled_.display();
 }
+
+void Display::printf(const char *fmt, ...)
+{
+    char buf[128]; // adjust size as needed
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+
+    // send the formatted string to the OLED, supporting newlines
+    const char *p = buf;
+    while (*p)
+    {
+        // find end of line or end of string
+        const char *e = strchr(p, '\n');
+        if (!e)
+            e = p + strlen(p);
+
+        oled_.print(String(p).substring(0, e - p));
+        oled_.println(); // move to next line
+        if (*e == '\n')
+            ++e;
+        p = e;
+    }
+}

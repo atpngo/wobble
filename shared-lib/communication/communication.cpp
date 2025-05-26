@@ -28,14 +28,14 @@ bool Communication::addPeer(const uint8_t *mac)
 
 bool Communication::send(const uint8_t *mac, const Packet &pkt)
 {
-    return esp_now_send(mac, (uint8_t *)&pkt, pkt.len) == ESP_OK;
+    return esp_now_send(mac, (uint8_t *)&pkt, sizeof(pkt)) == ESP_OK;
 }
 
 void Communication::broadcast(const Packet &pkt)
 {
     for (auto &p : _peers)
     {
-        esp_now_send(p.peer_addr, (uint8_t *)&pkt, sizeof(Packet));
+        send(p.peer_addr, pkt);
     }
 }
 

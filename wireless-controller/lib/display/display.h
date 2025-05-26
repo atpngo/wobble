@@ -20,6 +20,8 @@ public:
         oled_.println(approximate_to_zero(v, 1e-2));
     }
 
+    void printf(const char *fmt, ...);
+
 private:
     Adafruit_SSD1306 oled_;
 };

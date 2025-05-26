@@ -42,29 +42,11 @@ void handleIncoming(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     }
     else if (in_.type == Message::Telemetry)
     {
-        Serial.println("START ====");
-        for (int i = 0; i < 20; i++)
-        {
-            Serial.print("data[");
-            Serial.print(i);
-            Serial.print("] = ");
-            Serial.println(data[i]);
-        }
-        Serial.println("END ====");
-
         count++;
-        // Works fine when you pack it in the top level struct
-        Serial.print("P: ");
-        Serial.println(in_.pitch);
-
-        // when i memcpy the payload into a Telemetry object, it doesnt work
         memcpy(&data_, in_.payload, sizeof(data_));
-        Serial.print("Pitch: ");
-        Serial.print(data_.pitch);
-        Serial.print(" | L: ");
-        Serial.print(data_.left_enc);
-        Serial.print(" | R: ");
-        Serial.println(data_.right_enc);
+        display.reset();
+        display.printf("Pitch: %.2f\nL: %d  R: %d", data_.pitch, data_.left_enc, data_.right_enc);
+        display.update();
     }
 }
 
@@ -98,9 +80,9 @@ void setup()
 
 void loop()
 {
-    display.reset();
-    display.println(69);
-    display.update();
+    // display.reset();
+    // display.println(69);
+    // display.update();
     // clear buffer and reset cursor to top‐left (or wherever you like)
     // Serial.print("Dial: ");
     // Serial.print(dial.read());
@@ -112,9 +94,9 @@ void loop()
     // display.println(right_joystick.get_x()); // -220
     // display.println(right_joystick.get_y()); // -185
 
-    // // // use print() instead of println() so it won’t advance down a line
-    // // display.println(dial.read());
-    // // display.println(dial.button_pressed());
+    // use print() instead of println() so it won’t advance down a line
+    // display.println(dial.read());
+    // display.println(dial.button_pressed());
 
     // display.update();
     // delay(50);
