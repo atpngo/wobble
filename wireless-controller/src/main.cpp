@@ -32,9 +32,12 @@ int right_motor_power;
 Packet in_;
 Packet out_;
 Telemetry data_;
+unsigned long last_recv_ms = 0;
+
 void handleIncoming(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int len)
 {
     memcpy(&in_, data, len);
+    last_recv_ms = millis();
     if (in_.type == Message::Telemetry)
     {
         memcpy(&data_, in_.payload, in_.len);
@@ -66,6 +69,12 @@ void setup()
 
 void loop()
 {
+    if (millis() - last_recv_ms > 1000)
+    {
+        display.reset();
+        display.printf("LOS\n");
+        display.update();
+    }
     // Serial.print("Lx: ");
     // Serial.print(-left_joystick.get_x());
     // Serial.print(" | Ly: ");
