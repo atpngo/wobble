@@ -28,7 +28,7 @@ void Display::init()
 void Display::reset()
 {
     oled_.clearDisplay();
-    oled_.setCursor(0, 28);
+    oled_.setCursor(0, 10);
 }
 
 void Display::update()

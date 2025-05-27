@@ -14,6 +14,8 @@ Joystick::Joystick(int switch_pin,
 void Joystick::init(int x_offset, int y_offset)
 {
     pinMode(switch_pin_, INPUT_PULLUP);
+    pinMode(x_pin_, INPUT);
+    pinMode(y_pin_, INPUT);
     x_deadband_ = x_offset;
     y_deadband_ = y_offset;
 }
@@ -62,4 +64,14 @@ float Joystick::get_analog_percentage(const int pin, int deadband = 0)
 bool Joystick::button_pressed()
 {
     return digitalRead(switch_pin_) == LOW;
+}
+
+float Joystick::get_raw_x()
+{
+    return analogRead(x_pin_);
+}
+
+float Joystick::get_raw_y()
+{
+    return analogRead(y_pin_);
 }

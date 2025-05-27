@@ -5,21 +5,18 @@
 #include <vector>
 #include <functional>
 
-enum class Command : uint8_t
-{
-    NOP,
-    FORWARD,
-    BACKWARD,
-    TURN_L,
-    TURN_R
-};
-
 #pragma pack(push, 1)
 struct Telemetry
 {
     float pitch;
     int left_enc;
     int right_enc;
+};
+
+struct Command
+{
+    int left_wheel_power;
+    int right_wheel_power;
 };
 
 // message types

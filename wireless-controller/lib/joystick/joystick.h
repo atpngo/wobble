@@ -10,6 +10,9 @@ public:
     float get_y();
     bool button_pressed();
 
+    float get_raw_x();
+    float get_raw_y();
+
 private:
     float get_analog_percentage(const int pin, int deadband);
     const int switch_pin_;
