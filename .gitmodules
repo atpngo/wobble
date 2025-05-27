@@ -1,3 +1,0 @@
-[submodule "simulation/cpp/ArduinoEigen"]
-	path = simulation/cpp/ArduinoEigen
-	url = https://github.com/hideakitai/ArduinoEigen.git
