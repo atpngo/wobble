@@ -5,8 +5,8 @@ import pybind11
 ext_modules = [
     Extension(
         "control",  # Must match the name in PYBIND11_MODULE
-        ["cpp/bindings.cpp", "cpp/pid/pid.cpp"],
-        include_dirs=[pybind11.get_include(), "cpp/pid"],
+        ["cpp/bindings.cpp", "cpp/pid/pid.cpp", "cpp/lqr/lqr.cpp"],
+        include_dirs=[pybind11.get_include(), "cpp/pid", "cpp/eigen3", "cpp/lqr"],
         language="c++",
     ),
 ]

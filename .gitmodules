@@ -1,0 +1,3 @@
+[submodule "simulation/cpp/eigen3"]
+	path = simulation/cpp/eigen3
+	url = https://gitlab.com/libeigen/eigen.git

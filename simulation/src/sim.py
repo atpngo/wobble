@@ -11,6 +11,57 @@ import numpy as np
 import random
 import control
 
+import numpy as np
+from scipy.linalg import solve_discrete_are
+
+
+class LQRController:
+    """
+    Discrete-time LQR:
+      minimize sum (x'Qx + u'Ru)
+      s.t. x_{k+1} = A x_k + B u_k
+
+    u_k = -K x_k
+    """
+
+    def __init__(self, A, B, Q=None, R=None):
+        self.A = np.asarray(A)
+        self.B = np.asarray(B)
+        n = self.A.shape[0]
+        m = self.B.shape[1]
+
+        # defaults if you don’t pass Q/R
+        self.Q = np.eye(n) if Q is None else np.asarray(Q)
+        self.R = np.eye(m) if R is None else np.asarray(R)
+
+        # solve discrete‐time ARE: Aᵀ P A − P − (Aᵀ P B)(R + Bᵀ P B)⁻¹(Bᵀ P A) + Q = 0
+        P = solve_discrete_are(self.A, self.B, self.Q, self.R)
+        # compute K = (R + Bᵀ P B)⁻¹ (Bᵀ P A)
+        self.K = np.linalg.inv(self.R + self.B.T @ P @ self.B) @ (self.B.T @ P @ self.A)
+
+    def control(self, x):
+        """
+        x: state vector (n,)
+        returns: control vector u (m,)
+        """
+        x = np.asarray(x).reshape(-1)
+        return -self.K @ x
+
+    def update_model(self, A=None, B=None, Q=None, R=None):
+        """
+        If you want to re-tune with new A/B/Q/R:
+        """
+        if A is not None:
+            self.A = np.asarray(A)
+        if B is not None:
+            self.B = np.asarray(B)
+        if Q is not None:
+            self.Q = np.asarray(Q)
+        if R is not None:
+            self.R = np.asarray(R)
+        # recompute K
+        self.__init__(self.A, self.B, self.Q, self.R)
+
 
 URDF_FILEPATH = os.path.join(script_dir, "robot.urdf")
 
@@ -35,6 +86,85 @@ def clamp(value, min, max):
     return value
 
 
+class Robot:
+    def __init__(
+        self,
+        robot_id,
+        left_wheel,
+        right_wheel,
+        initial_pitch=0.0,
+        initial_left_enc=0,
+        initial_right_enc=0,
+    ):
+        self.robot_id = robot_id
+        self.left_wheel_idx = left_wheel
+        self.right_wheel_idx = right_wheel
+        self.state = {
+            "left_enc": initial_left_enc,
+            "right_enc": initial_right_enc,
+            "pitch": initial_pitch,
+        }
+        self.pos = None
+        self.ori = None
+
+    def get(self, key):
+        if key in self.state:
+            return self.state[key]
+        raise KeyError
+
+    def get_state(self):
+        return self.state
+
+    def get_position(self):
+        return self.pos
+
+    def get_orientation(self):
+        return self.ori
+
+    def update(self, signal):
+        """
+        Step through and return state
+        """
+        # Emulate motor output velocity based on control signal
+        analogSignal = clamp(signal, -255, 255)
+        percentage = analogSignal / 255
+        velocity = percentage * max_velocity
+        left_wheel_velocity = -(velocity + random.uniform(-2, 2))
+        right_wheel_velocity = velocity + random.uniform(-1, 1)
+
+        # Terminating condition is when the robot tips over
+        if abs(self.get("pitch")) > 45.0:
+            left_wheel_velocity = 0.0
+            right_wheel_velocity = 0.0
+
+        # Apply wheel force
+        p.setJointMotorControl2(
+            self.robot_id,
+            self.left_wheel_idx,
+            p.VELOCITY_CONTROL,
+            targetVelocity=left_wheel_velocity,
+            force=max_force,
+        )
+        p.setJointMotorControl2(
+            self.robot_id,
+            self.right_wheel_idx,
+            p.VELOCITY_CONTROL,
+            targetVelocity=right_wheel_velocity,
+            force=max_force,
+        )
+
+        # Update state
+        self.pos, self.ori = p.getBasePositionAndOrientation(self.robot_id)
+        robotEuler = p.getEulerFromQuaternion(self.ori)
+        pitch = robotEuler[0] * 180 / math.pi
+        self.state["pitch"] = add_noise(pitch)
+        self.state["left_enc"] = p.getJointState(self.robot_id, self.left_wheel_idx)[0]
+        self.state["right_enc"] = p.getJointState(self.robot_id, self.right_wheel_idx)[
+            0
+        ]
+        return self.state
+
+
 class Simulation:
     def __init__(self):
         # Initialize PyBullet
@@ -55,52 +185,22 @@ class Simulation:
         # Load robot - replace with your URDF
         initialOrientation = p.getQuaternionFromEuler([1 / 100, 0.0, 0])
         self.robotId = p.loadURDF(URDF_FILEPATH, [0, 0, 0.2], initialOrientation)
-
-        # Get wheel joint indices
-        self.leftWheelIndex = 0
-        self.rightWheelIndex = 1
+        self.robot = Robot(self.robotId, initial_pitch=0.2, left_wheel=0, right_wheel=1)
 
     def step(self):
         # Get robot state
-        robotPos, robotOrn = p.getBasePositionAndOrientation(self.robotId)
-        robotEuler = p.getEulerFromQuaternion(robotOrn)
-        pitch = robotEuler[0] * 180 / math.pi
-        pitch = add_noise(pitch)
+        pitch = self.robot.get("pitch")
 
-        # Simple P controller for balance
+        # Control
         balanceControl = controller.get_signal(pitch, 0.0)
-        analogSignal = clamp(balanceControl, -255, 255)
-        percentage = analogSignal / 255
-        velocity = percentage * max_velocity
-        left_wheel_velocity = -(velocity + random.uniform(-2, 2))
-        right_wheel_velocity = velocity + random.uniform(-1, 1)
-        if abs(pitch) > 45.0:
-            left_wheel_velocity = 0.0
-            right_wheel_velocity = 0.0
-        left_encoder = p.getJointState(self.robotId, self.leftWheelIndex)[0]
-        right_encoder = p.getJointState(self.robotId, self.rightWheelIndex)[0]
-        # print(f"pitch: {pitch:.2f}, L: {left_encoder:.2f}, R: {right_encoder:.2f}")
-        # Apply wheel controls
-        p.setJointMotorControl2(
-            self.robotId,
-            self.leftWheelIndex,
-            p.VELOCITY_CONTROL,
-            targetVelocity=left_wheel_velocity,
-            force=max_force,
-        )
-        p.setJointMotorControl2(
-            self.robotId,
-            self.rightWheelIndex,
-            p.VELOCITY_CONTROL,
-            targetVelocity=right_wheel_velocity,
-            force=max_force,
-        )
+
+        self.robot.update(balanceControl)
 
         p.resetDebugVisualizerCamera(
             cameraDistance=0.5,
             cameraYaw=45,
             cameraPitch=-10,
-            cameraTargetPosition=robotPos,
+            cameraTargetPosition=self.robot.get_position(),
         )
 
 
@@ -108,12 +208,35 @@ class Simulation:
 class Environment:
     def __init__(self, timeout=20):
         self.timeout = timeout
-        self.observation = {"left_encoder": 0, "right_encoder": 0, "pitch_degrees": 0}
+
+
+class ControllerWrapper:
+    def __init__(self, controller):
+        self.controller = controller
+        self.type = type(controller)
+        print(f"Using controller: {self.type}")
+
+    def get_signal(self, arg1, arg2):
+        if self.type == control.PID:
+            current_pitch, goal_pitch = arg1, arg2
+            return self.controller.get_signal(current_pitch, goal_pitch)
+        elif self.type == LQRController:
+            return (self.controller.control(np.asarray([arg1, arg2])))[0]
+        elif self.type == control.LQR:
+            pitch, delta_pitch = arg1, arg2
+            return self.controller.compute(pitch, delta_pitch)
 
 
 if __name__ == "__main__":
     sim = Simulation()
-    controller = control.PID(20, 0, 0.05, dt)
+    controller = ControllerWrapper(control.PID(2, 10, 0, dt))
+    # controller = ControllerWrapper(control.LQR(1, 2.3))
+    # dt = 1 / 60
+    # A = np.array([[1, dt], [0, 1]])
+    # B = np.array([[0], [dt]])
+    # Q = np.diag([2, 1])
+    # R = np.array([[0.5]])
+    # controller = ControllerWrapper(LQRController(A, B, Q, R))
     while True:
         sim.step()
         time.sleep(dt)
