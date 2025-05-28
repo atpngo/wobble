@@ -9,6 +9,7 @@
 struct Telemetry
 {
     float pitch;
+    float yaw;
     int left_enc;
     int right_enc;
 };

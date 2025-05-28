@@ -83,10 +83,6 @@ void handleIncoming(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     if (in_.type == Message::Command)
     {
         memcpy(&data_, in_.payload, in_.len);
-        // Serial.print("L: ");
-        // Serial.print(data_.left_wheel_power);
-        // Serial.print(" | R: ");
-        // Serial.println(data_.right_wheel_power);
         left_motor.spin(data_.left_wheel_power);
         right_motor.spin(data_.right_wheel_power);
     }
@@ -113,6 +109,7 @@ void loop()
     out_.type = Message::Telemetry;
     Telemetry t{
         .pitch = imu.get_pitch(),
+        .yaw = imu.get_yaw(),
         .left_enc = left_wheel_encoder.read(),
         .right_enc = right_wheel_encoder.read(),
     };

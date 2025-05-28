@@ -41,8 +41,11 @@ void handleIncoming(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
     if (in_.type == Message::Telemetry)
     {
         memcpy(&data_, in_.payload, in_.len);
+        Serial.print(data_.left_enc);
+        Serial.print(",");
+        Serial.println(data_.right_enc);
         display.reset();
-        display.printf("Pitch: %.2f\nL: %d  R: %d\n", data_.pitch, data_.left_enc, data_.right_enc);
+        display.printf("Pitch: %.2f\nYaw: %.2f\nL: %d  R: %d\n", data_.pitch, data_.yaw, data_.left_enc, data_.right_enc);
         display.printf("Dial: %d", dial.read());
         display.printf("Power: %d, %d", left_motor_power, right_motor_power);
         display.update();
@@ -96,5 +99,6 @@ void loop()
     out_.len = sizeof(c);
     memcpy(out_.payload, &c, out_.len);
     socket.send(peer, out_);
+
     delay(100);
 }
