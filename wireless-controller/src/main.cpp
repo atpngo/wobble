@@ -9,15 +9,15 @@
  */
 // Switches
 const int LEFT_SW = 12;  // blue
-const int LEFT_Y = 39;   // white
+const int LEFT_Y = 39;   // purple
 const int LEFT_X = 36;   // gray
-const int RIGHT_SW = 26; // white
-const int RIGHT_Y = 32;  // green
-const int RIGHT_X = 33;  // orange
+const int RIGHT_SW = 26; // blue
+const int RIGHT_Y = 32;  // purple
+const int RIGHT_X = 33;  // gray
 // Encoder
-const int ENC_SW = 13; // gray
-const int ENC_CLK = 0; // yellow
-const int ENC_DT = 4;  // green
+const int ENC_SW = 13; // orange
+const int ENC_CLK = 0; // green
+const int ENC_DT = 4;  // yellow
 
 // Objects
 Joystick left_joystick(LEFT_SW, LEFT_X, LEFT_Y);
