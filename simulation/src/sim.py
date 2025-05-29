@@ -68,7 +68,7 @@ URDF_FILEPATH = os.path.join(script_dir, "robot.urdf")
 
 # Simulation params
 dt = 0.01
-max_velocity = 50  # radians per second
+MAX_VELOCITY = 50  # radians per second
 max_force = 1
 
 
@@ -132,24 +132,23 @@ class Robot:
     def get_orientation(self):
         return self.ori
 
-    def update(self, signal):
+    def get_velocity_from_signal(self, signal):
+        analog_signal = clamp(signal, -255, 255)
+        percentage = analog_signal / 255
+        return percentage * MAX_VELOCITY
+
+    def update(self, left_motor_signal, right_motor_signal):
         """
         Step through and return state
         """
         # Emulate motor output velocity based on control signal
-        analogSignal = clamp(signal, -255, 255)
-        percentage = analogSignal / 255
-        velocity = percentage * max_velocity
-        left_wheel_velocity = -(velocity + random.uniform(-2, 2))
-        right_wheel_velocity = velocity + random.uniform(-1, 1)
-        left_wheel_velocity = -velocity
-        right_wheel_velocity = velocity
+        left_velocity = self.get_velocity_from_signal(left_motor_signal)
+        right_velocity = self.get_velocity_from_signal(right_motor_signal)
 
-        # Terminating condition is when the robot tips over
-        if abs(self.get("pitch")) > 45.0:
-            left_wheel_velocity = 0.0
-            right_wheel_velocity = 0.0
-            sys.exit(1)
+        left_wheel_velocity = -(left_velocity + random.uniform(-2, 2))
+        right_wheel_velocity = right_velocity + random.uniform(-1, 1)
+        # left_wheel_velocity = -left_velocity
+        # right_wheel_velocity = right_velocity
 
         # Apply wheel force
         p.setJointMotorControl2(
@@ -215,15 +214,13 @@ class Simulation:
             lifeTime=0,
         )
 
-    def step(self):
+    def get_state(self):
+        return self.current_time, self.robot.get_state()
+
+    def step(self, left_motor_signal, right_motor_signal):
         p.stepSimulation()
-        # Get robot state
-        pitch = self.robot.get("pitch")
 
-        # Control
-        balanceControl = controller.get_signal(pitch, 0.0)
-
-        self.robot.update(balanceControl)
+        self.robot.update(left_motor_signal, right_motor_signal)
 
         p.resetDebugVisualizerCamera(
             cameraDistance=0.5,
@@ -242,16 +239,7 @@ class Simulation:
         )
         self.current_time += dt
 
-        return self.current_time, self.robot.get_state()
-
-
-# Use the simulation
-class Environment:
-    def __init__(self, timeout=10):
-        self.timeout = timeout
-
-    def step(self, left_wheel_signal, right_wheel_signal):
-        pass
+        return self.get_state()
 
 
 class ControllerWrapper:
@@ -274,18 +262,38 @@ class ControllerWrapper:
 if __name__ == "__main__":
     now = datetime.datetime.now()
     ts = now.strftime("%m_%d_%Y_%H_%M_%S")
-    logger = Logger(f"./logs/PID/trial_{ts}.log", ["timestamp_s", "pitch_degrees"])
+    logname = f"./logs/trial_{ts}.log"
+    logname = f"./logs/pid/trial_2.log"
+    logger = Logger(logname, ["timestamp_s", "pitch_degrees"])
     sim = Simulation()
+    # PID Controller
     controller = ControllerWrapper(control.PID(10, 100, 0, dt))
+
+    # LQR Controller
     # controller = ControllerWrapper(control.LQR(1, 2.3))
-    # dt = 1 / 60
     # A = np.array([[1, dt], [0, 1]])
     # B = np.array([[0], [dt]])
-    # Q = np.diag([2, 1])
-    # R = np.array([[0.5]])
+    # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
+    # R = np.array([1])  # output torque
     # controller = ControllerWrapper(LQRController(A, B, Q, R))
+
+    # Main logic
+    current_time_seconds, state = sim.get_state()
+    logger.write(f"{round(current_time_seconds, 3)},{state['pitch']}")
     while True:
-        current_time_seconds, state = sim.step()
-        logger.write(f"{current_time_seconds},{state['pitch']}")
+        pitch = state["pitch"]
+        signal = controller.get_signal(pitch, 0)
+        left_control_signal = signal
+        right_control_signal = signal
+        current_time_seconds, state = sim.step(
+            left_control_signal, right_control_signal
+        )
+        logger.write(f"{round(current_time_seconds, 3)},{round(state['pitch'],5)}")
         if current_time_seconds >= 10:
-            break
+            print("PASS")
+            sys.exit(0)
+
+        # Terminating conditons
+        if pitch > 45:
+            print("FAIL")
+            sys.exit(1)
