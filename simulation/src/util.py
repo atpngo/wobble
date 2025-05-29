@@ -17,7 +17,7 @@ class Logger:
 
 def get_formatted_time_string(log_dir):
     now = datetime.datetime.now()
-    ts = now.strftime("%m_%d_%Y_%H_%M_%S")
+    ts = now.strftime("%m_%d_%Y_%H_%M_%S_") + f"{now.microsecond:03d}"
     return f"{log_dir}/trial_{ts}.log"
 
 

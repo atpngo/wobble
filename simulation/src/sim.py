@@ -7,11 +7,13 @@ import pybullet as p
 import pybullet_data
 import math
 import numpy as np
-import datetime
 import control
 import alt_control
 import util
 import numpy as np
+import random
+
+random.seed(69)
 
 
 # Simulation params
@@ -104,9 +106,9 @@ class Robot:
 
 
 class Simulation:
-    def __init__(self):
+    def __init__(self, render):
         # Initialize PyBullet
-        physicsClient = p.connect(p.GUI)
+        physicsClient = p.connect(p.GUI if render else p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         p.setRealTimeSimulation(1)
@@ -190,8 +192,8 @@ class ControllerWrapper:
             return self.controller.compute(pitch, delta_pitch)
 
 
-def run_trial(controller, log_name, max_runtime=10):
-    sim = Simulation()
+def run_trial(controller, log_name, max_runtime=10, render=True):
+    sim = Simulation(render)
     logger = util.Logger(log_name, ["timestamp_s", "pitch_degrees"])
 
     try:
@@ -233,13 +235,23 @@ if __name__ == "__main__":
     # R = np.array([1])  # output torque
     # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
 
-    # TODO: MPC Controller
+    # A = np.array([[1, Configuration.dt], [0, 1]])
+    # B = np.array([[0], [Configuration.dt]])
+    # grid = {
+    #     "q1": [1, 10, 50, 100],
+    #     "q2": [0.1, 1, 10],
+    #     "r": [0.01, 0.1, 1],
+    # }
+    # Run trials
+    for trial in range(3):
+        # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
+        # R = np.array([1])  # output torque
+        # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
 
-    # Run trial
-    for trial in range(5):
         exit_code = run_trial(
             controller=controller,
             log_name=util.get_formatted_time_string("./logs"),
-            max_runtime=1,
+            max_runtime=5,
+            render=False,
         )
     sys.exit(exit_code)
