@@ -18,7 +18,7 @@ random.seed(69)
 
 # Simulation params
 class Configuration:
-    urdf_filepath = os.path.join(script_dir, "robot.urdf")
+    urdf_filepath = util.get_relative_path("robot.urdf")
     dt = 0.01
     max_velocity = 50  # radians per second
     max_force = 1
@@ -250,7 +250,7 @@ if __name__ == "__main__":
 
         exit_code = run_trial(
             controller=controller,
-            log_name=util.get_formatted_time_string("./logs"),
+            log_name=util.get_formatted_time_string("../logs"),
             max_runtime=5,
             render=False,
         )

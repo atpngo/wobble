@@ -1,10 +1,13 @@
 import random
 import datetime
+import os
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class Logger:
     def __init__(self, filename, header):
-        self.fout = open(filename, "w+")
+        self.fout = open(get_relative_path(filename), "w+")
         self.write(",".join(header))
 
     def __del__(self):
@@ -31,3 +34,7 @@ def clamp(value, min, max):
     elif value > max:
         return max
     return value
+
+
+def get_relative_path(path):
+    return os.path.join(SCRIPT_DIR, path)
