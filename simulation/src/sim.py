@@ -178,7 +178,6 @@ class ControllerWrapper:
     def __init__(self, controller):
         self.controller = controller
         self.type = type(controller)
-        print(f"Using controller: {self.type}")
 
     def get_signal(self, **kwargs):
         if self.type == control.PID:
@@ -226,7 +225,7 @@ def run_trial(controller, log_name, max_runtime=10, render=True, log_data=True):
 
 if __name__ == "__main__":
     # PID Controller
-    controller = ControllerWrapper(control.PID(10, 100, 0, Configuration.dt))
+    # controller = ControllerWrapper(control.PID(10, 100, 0, Configuration.dt))
 
     # LQR Controller
     # A = np.array([[1, Configuration.dt], [0, 1]])
@@ -235,27 +234,36 @@ if __name__ == "__main__":
     # R = np.array([1])  # output torque
     # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
 
-    # A = np.array([[1, Configuration.dt], [0, 1]])
-    # B = np.array([[0], [Configuration.dt]])
-    # grid = {
-    #     "q1": [1, 10, 50, 100],
-    #     "q2": [0.1, 1, 10],
-    #     "r": [0.01, 0.1, 1],
-    # }
+    A = np.array([[1, Configuration.dt], [0, 1]])
+    B = np.array([[0], [Configuration.dt]])
+    grid = {
+        "q1": np.logspace(0, 4, 20),
+        "q2": np.logspace(-1, 3, 20),
+        "r": np.logspace(-4, 2, 20),
+    }
     # Run trials
-    for trial in range(3):
+    # for trial in range(3):
+    passes = 0
+    fails = 0
+    for q1 in grid["q1"]:
+        for q2 in grid["q2"]:
+            for r in grid["r"]:
+                print(f"Q=({q1},{q2}) R={r}")
+                Q = np.diag([q1, q2])  # pitch angular position, pitch angular velocity
+                R = np.array([r])  # output torque
+                controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
 
-        # for grid in
+                exit_code = run_trial(
+                    controller=controller,
+                    log_name=util.get_formatted_time_string("../logs"),
+                    max_runtime=5,
+                    render=False,
+                    log_data=False,
+                )
+                if exit_code == 0:
+                    passes += 1
+                else:
+                    fails += 1
 
-        # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
-        # R = np.array([1])  # output torque
-        # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
-
-        exit_code = run_trial(
-            controller=controller,
-            log_name=util.get_formatted_time_string("../logs"),
-            max_runtime=5,
-            render=False,
-            log_data=False,
-        )
+    print(f"Ran {passes+fails} trials.\nPasses: {passes}.\nFails:{fails}")
     sys.exit(exit_code)
