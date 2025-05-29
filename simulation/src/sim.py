@@ -4,97 +4,21 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../build"))
 
 import pybullet as p
-import time
 import pybullet_data
 import math
 import numpy as np
 import random
 import datetime
 import control
-
+import alt_control
+import util
 import numpy as np
-from scipy.linalg import solve_discrete_are
-
-
-class LQRController:
-    """
-    Discrete-time LQR:
-      minimize sum (x'Qx + u'Ru)
-      s.t. x_{k+1} = A x_k + B u_k
-
-    u_k = -K x_k
-    """
-
-    def __init__(self, A, B, Q=None, R=None):
-        self.A = np.asarray(A)
-        self.B = np.asarray(B)
-        n = self.A.shape[0]
-        m = self.B.shape[1]
-
-        # defaults if you don’t pass Q/R
-        self.Q = np.eye(n) if Q is None else np.asarray(Q)
-        self.R = np.eye(m) if R is None else np.asarray(R)
-
-        # solve discrete‐time ARE: Aᵀ P A − P − (Aᵀ P B)(R + Bᵀ P B)⁻¹(Bᵀ P A) + Q = 0
-        P = solve_discrete_are(self.A, self.B, self.Q, self.R)
-        # compute K = (R + Bᵀ P B)⁻¹ (Bᵀ P A)
-        self.K = np.linalg.inv(self.R + self.B.T @ P @ self.B) @ (self.B.T @ P @ self.A)
-
-    def control(self, x):
-        """
-        x: state vector (n,)
-        returns: control vector u (m,)
-        """
-        x = np.asarray(x).reshape(-1)
-        return -self.K @ x
-
-    def update_model(self, A=None, B=None, Q=None, R=None):
-        """
-        If you want to re-tune with new A/B/Q/R:
-        """
-        if A is not None:
-            self.A = np.asarray(A)
-        if B is not None:
-            self.B = np.asarray(B)
-        if Q is not None:
-            self.Q = np.asarray(Q)
-        if R is not None:
-            self.R = np.asarray(R)
-        # recompute K
-        self.__init__(self.A, self.B, self.Q, self.R)
-
-
-URDF_FILEPATH = os.path.join(script_dir, "robot.urdf")
 
 # Simulation params
+URDF_FILEPATH = os.path.join(script_dir, "robot.urdf")
 dt = 0.01
 MAX_VELOCITY = 50  # radians per second
 max_force = 1
-
-
-def add_noise(value):
-    return random.uniform(-0.5, 0.5) + value
-
-
-def clamp(value, min, max):
-    if value < min:
-        return min
-    elif value > max:
-        return max
-    return value
-
-
-class Logger:
-    def __init__(self, filename, header):
-        self.fout = open(filename, "w+")
-        self.write(",".join(header))
-
-    def __del__(self):
-        print("Closing logger...")
-        self.fout.close()
-
-    def write(self, line):
-        self.fout.write(line + "\n")
 
 
 class Robot:
@@ -133,7 +57,7 @@ class Robot:
         return self.ori
 
     def get_velocity_from_signal(self, signal):
-        analog_signal = clamp(signal, -255, 255)
+        analog_signal = util.clamp(signal, -255, 255)
         percentage = analog_signal / 255
         return percentage * MAX_VELOCITY
 
@@ -145,8 +69,8 @@ class Robot:
         left_velocity = self.get_velocity_from_signal(left_motor_signal)
         right_velocity = self.get_velocity_from_signal(right_motor_signal)
 
-        left_wheel_velocity = -(left_velocity + random.uniform(-2, 2))
-        right_wheel_velocity = right_velocity + random.uniform(-1, 1)
+        left_wheel_velocity = -util.add_noise(left_velocity, 2)
+        right_wheel_velocity = util.add_noise(right_velocity, 1)
         # left_wheel_velocity = -left_velocity
         # right_wheel_velocity = right_velocity
 
@@ -170,7 +94,7 @@ class Robot:
         self.pos, self.ori = p.getBasePositionAndOrientation(self.robot_id)
         robotEuler = p.getEulerFromQuaternion(self.ori)
         pitch = robotEuler[0] * 180 / math.pi
-        self.state["pitch"] = add_noise(pitch)
+        self.state["pitch"] = util.add_noise(pitch, 0.5)
         self.state["left_enc"] = p.getJointState(self.robot_id, self.left_wheel_idx)[0]
         self.state["right_enc"] = p.getJointState(self.robot_id, self.right_wheel_idx)[
             0
@@ -252,7 +176,7 @@ class ControllerWrapper:
         if self.type == control.PID:
             current_pitch, goal_pitch = arg1, arg2
             return self.controller.get_signal(current_pitch, goal_pitch)
-        elif self.type == LQRController:
+        elif self.type == alt_control.LQRController:
             return (self.controller.control(np.asarray([arg1, arg2])))[0]
         elif self.type == control.LQR:
             pitch, delta_pitch = arg1, arg2
@@ -263,8 +187,8 @@ if __name__ == "__main__":
     now = datetime.datetime.now()
     ts = now.strftime("%m_%d_%Y_%H_%M_%S")
     logname = f"./logs/trial_{ts}.log"
-    logname = f"./logs/pid/trial_2.log"
-    logger = Logger(logname, ["timestamp_s", "pitch_degrees"])
+    # logname = f"./logs/pid/trial_2.log"
+    logger = util.Logger(logname, ["timestamp_s", "pitch_degrees"])
     sim = Simulation()
     # PID Controller
     controller = ControllerWrapper(control.PID(10, 100, 0, dt))
@@ -275,7 +199,7 @@ if __name__ == "__main__":
     # B = np.array([[0], [dt]])
     # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
     # R = np.array([1])  # output torque
-    # controller = ControllerWrapper(LQRController(A, B, Q, R))
+    # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
 
     # Main logic
     current_time_seconds, state = sim.get_state()

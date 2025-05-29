@@ -13,3 +13,4 @@ robot-software
 !/.gitignore
 **/test.log
 **.mp4
+**/__pycache__
