@@ -6,15 +6,21 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class Logger:
-    def __init__(self, filename, header):
-        self.fout = open(get_relative_path(filename), "w+")
-        self.write(",".join(header))
+    def __init__(self, filename, header, log_data=True):
+        self.active = log_data
+        if self.active:
+            self.fout = open(get_relative_path(filename), "w+")
+            self.write(",".join(header))
 
     def __del__(self):
+        if not self.active:
+            return
         print("Closing logger...")
         self.fout.close()
 
     def write(self, line):
+        if not self.active:
+            return
         self.fout.write(line + "\n")
 
 

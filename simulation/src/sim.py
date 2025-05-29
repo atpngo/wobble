@@ -192,9 +192,9 @@ class ControllerWrapper:
             return self.controller.compute(pitch, delta_pitch)
 
 
-def run_trial(controller, log_name, max_runtime=10, render=True):
+def run_trial(controller, log_name, max_runtime=10, render=True, log_data=True):
     sim = Simulation(render)
-    logger = util.Logger(log_name, ["timestamp_s", "pitch_degrees"])
+    logger = util.Logger(log_name, ["timestamp_s", "pitch_degrees"], log_data=log_data)
 
     try:
         # Main logic
@@ -244,6 +244,9 @@ if __name__ == "__main__":
     # }
     # Run trials
     for trial in range(3):
+
+        # for grid in
+
         # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
         # R = np.array([1])  # output torque
         # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
@@ -253,5 +256,6 @@ if __name__ == "__main__":
             log_name=util.get_formatted_time_string("../logs"),
             max_runtime=5,
             render=False,
+            log_data=False,
         )
     sys.exit(exit_code)
