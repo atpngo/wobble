@@ -13,11 +13,13 @@ import alt_control
 import util
 import numpy as np
 
+
 # Simulation params
-URDF_FILEPATH = os.path.join(script_dir, "robot.urdf")
-dt = 0.01
-MAX_VELOCITY = 50  # radians per second
-max_force = 1
+class Configuration:
+    urdf_filepath = os.path.join(script_dir, "robot.urdf")
+    dt = 0.01
+    max_velocity = 50  # radians per second
+    max_force = 1
 
 
 class Robot:
@@ -58,7 +60,7 @@ class Robot:
     def get_velocity_from_signal(self, signal):
         analog_signal = util.clamp(signal, -255, 255)
         percentage = analog_signal / 255
-        return percentage * MAX_VELOCITY
+        return percentage * Configuration.max_velocity
 
     def update(self, left_motor_signal, right_motor_signal):
         """
@@ -79,14 +81,14 @@ class Robot:
             self.left_wheel_idx,
             p.VELOCITY_CONTROL,
             targetVelocity=left_wheel_velocity,
-            force=max_force,
+            force=Configuration.max_force,
         )
         p.setJointMotorControl2(
             self.robot_id,
             self.right_wheel_idx,
             p.VELOCITY_CONTROL,
             targetVelocity=right_wheel_velocity,
-            force=max_force,
+            force=Configuration.max_force,
         )
 
         # Update state
@@ -117,14 +119,16 @@ class Simulation:
         p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
 
         p.setRealTimeSimulation(0)
-        p.setTimeStep(dt)
+        p.setTimeStep(Configuration.dt)
 
         # Load ground plane
         planeId = p.loadURDF("plane.urdf")
 
         # Load robot - replace with your URDF
         initialOrientation = p.getQuaternionFromEuler([1 / 100, 0.0, 0])
-        self.robotId = p.loadURDF(URDF_FILEPATH, [0, 0, 0.2], initialOrientation)
+        self.robotId = p.loadURDF(
+            Configuration.urdf_filepath, [0, 0, 0.2], initialOrientation
+        )
         self.robot = Robot(self.robotId, initial_pitch=0.2, left_wheel=0, right_wheel=1)
 
         # Timing
@@ -163,7 +167,7 @@ class Simulation:
             lifeTime=0,
             replaceItemUniqueId=self.time_text_id,
         )
-        self.current_time += dt
+        self.current_time += Configuration.dt
 
         return self.get_state()
 
@@ -210,7 +214,7 @@ def run_trial(controller, log_name, max_runtime=10):
                 print("PASS")
                 return 0
 
-            # Terminating conditons
+            # Terminating conditions
             if pitch > 45:
                 print("FAIL")
                 return 1
@@ -219,19 +223,23 @@ def run_trial(controller, log_name, max_runtime=10):
 
 
 if __name__ == "__main__":
-    now = datetime.datetime.now()
-    ts = now.strftime("%m_%d_%Y_%H_%M_%S")
-    logname = f"./logs/trial_{ts}.log"
-    # logname = f"./logs/pid/trial_2.log"
     # PID Controller
-    controller = ControllerWrapper(control.PID(10, 100, 0, dt))
+    controller = ControllerWrapper(control.PID(10, 100, 0, Configuration.dt))
 
     # LQR Controller
-    # A = np.array([[1, dt], [0, 1]])
-    # B = np.array([[0], [dt]])
+    # A = np.array([[1, Configuration.dt], [0, 1]])
+    # B = np.array([[0], [Configuration.dt]])
     # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
     # R = np.array([1])  # output torque
     # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
+
+    # TODO: MPC Controller
+
+    # Run trial
     for trial in range(5):
-        exit_code = run_trial(controller=controller, log_name=logname, max_runtime=1)
+        exit_code = run_trial(
+            controller=controller,
+            log_name=util.get_formatted_time_string("./logs"),
+            max_runtime=1,
+        )
     sys.exit(exit_code)

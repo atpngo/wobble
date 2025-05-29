@@ -1,4 +1,5 @@
 import random
+import datetime
 
 
 class Logger:
@@ -12,6 +13,12 @@ class Logger:
 
     def write(self, line):
         self.fout.write(line + "\n")
+
+
+def get_formatted_time_string(log_dir):
+    now = datetime.datetime.now()
+    ts = now.strftime("%m_%d_%Y_%H_%M_%S")
+    return f"{log_dir}/trial_{ts}.log"
 
 
 def add_noise(value, mag=1):
