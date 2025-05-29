@@ -11,3 +11,4 @@ venv
 robot-software
 **/.gitignore
 !/.gitignore
+**/test.log

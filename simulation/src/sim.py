@@ -232,9 +232,9 @@ class Simulation:
         )
         robot_x, robot_y, robot_z = self.robot.get_position()
         p.addUserDebugText(
-            f"Time: {self.current_time:.2f}s, Pitch: {pitch:.1f} deg",
+            f"Time: {self.current_time:.2f}s, Pitch: {pitch: .1f} deg",
             [robot_x - 0.8, robot_y, robot_z + 0.1],
-            textColorRGB=[1, 1, 0],
+            textColorRGB=[0, 0, 0],
             textSize=1.5,
             lifeTime=0,
             replaceItemUniqueId=self.time_text_id,
@@ -284,3 +284,5 @@ if __name__ == "__main__":
     while True:
         current_time_seconds, state = sim.step()
         logger.write(f"{current_time_seconds},{state['pitch']}")
+        if current_time_seconds >= 10:
+            sys.exit(0)
