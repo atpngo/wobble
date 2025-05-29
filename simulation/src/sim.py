@@ -7,7 +7,6 @@ import pybullet as p
 import pybullet_data
 import math
 import numpy as np
-import random
 import datetime
 import control
 import alt_control
@@ -138,6 +137,9 @@ class Simulation:
             lifeTime=0,
         )
 
+    def teardown(self):
+        p.disconnect()
+
     def get_state(self):
         return self.current_time, self.robot.get_state()
 
@@ -154,7 +156,7 @@ class Simulation:
         )
         robot_x, robot_y, robot_z = self.robot.get_position()
         p.addUserDebugText(
-            f"Time: {self.current_time:.2f}s, Pitch: {pitch: .1f} deg",
+            f"Time: {self.current_time:.2f}s, Pitch: {self.robot.get("pitch"): .1f} deg",
             [robot_x - 0.8, robot_y, robot_z + 0.1],
             textColorRGB=[0, 0, 0],
             textSize=1.5,
@@ -172,15 +174,48 @@ class ControllerWrapper:
         self.type = type(controller)
         print(f"Using controller: {self.type}")
 
-    def get_signal(self, arg1, arg2):
+    def get_signal(self, **kwargs):
         if self.type == control.PID:
-            current_pitch, goal_pitch = arg1, arg2
+            current_pitch, goal_pitch = kwargs["pitch"], kwargs["goal_pitch"]
             return self.controller.get_signal(current_pitch, goal_pitch)
         elif self.type == alt_control.LQRController:
-            return (self.controller.control(np.asarray([arg1, arg2])))[0]
+            pitch, delta_pitch = kwargs["pitch"], kwargs["d_pitch"]
+            return (self.controller.control(np.asarray([pitch, delta_pitch])))[0]
         elif self.type == control.LQR:
-            pitch, delta_pitch = arg1, arg2
+            pitch, delta_pitch = kwargs["pitch"], kwargs["d_pitch"]
             return self.controller.compute(pitch, delta_pitch)
+
+
+def run_trial(controller, log_name, max_runtime=10):
+    sim = Simulation()
+    logger = util.Logger(log_name, ["timestamp_s", "pitch_degrees"])
+
+    try:
+        # Main logic
+        current_time_seconds, state = sim.get_state()
+        logger.write(f"{round(current_time_seconds, 3)},{state['pitch']}")
+        curr_pitch, prev_pitch = state["pitch"], 0
+        while True:
+            pitch = state["pitch"]
+            d_pitch = pitch - prev_pitch
+            prev_pitch = pitch
+            signal = controller.get_signal(pitch=pitch, d_pitch=d_pitch, goal_pitch=0)
+            left_control_signal = signal
+            right_control_signal = signal
+            current_time_seconds, state = sim.step(
+                left_control_signal, right_control_signal
+            )
+            logger.write(f"{round(current_time_seconds, 3)},{round(state['pitch'],5)}")
+            if current_time_seconds >= max_runtime:
+                print("PASS")
+                return 0
+
+            # Terminating conditons
+            if pitch > 45:
+                print("FAIL")
+                return 1
+    finally:
+        sim.teardown()
 
 
 if __name__ == "__main__":
@@ -188,36 +223,15 @@ if __name__ == "__main__":
     ts = now.strftime("%m_%d_%Y_%H_%M_%S")
     logname = f"./logs/trial_{ts}.log"
     # logname = f"./logs/pid/trial_2.log"
-    logger = util.Logger(logname, ["timestamp_s", "pitch_degrees"])
-    sim = Simulation()
     # PID Controller
     controller = ControllerWrapper(control.PID(10, 100, 0, dt))
 
     # LQR Controller
-    # controller = ControllerWrapper(control.LQR(1, 2.3))
     # A = np.array([[1, dt], [0, 1]])
     # B = np.array([[0], [dt]])
     # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
     # R = np.array([1])  # output torque
     # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
-
-    # Main logic
-    current_time_seconds, state = sim.get_state()
-    logger.write(f"{round(current_time_seconds, 3)},{state['pitch']}")
-    while True:
-        pitch = state["pitch"]
-        signal = controller.get_signal(pitch, 0)
-        left_control_signal = signal
-        right_control_signal = signal
-        current_time_seconds, state = sim.step(
-            left_control_signal, right_control_signal
-        )
-        logger.write(f"{round(current_time_seconds, 3)},{round(state['pitch'],5)}")
-        if current_time_seconds >= 10:
-            print("PASS")
-            sys.exit(0)
-
-        # Terminating conditons
-        if pitch > 45:
-            print("FAIL")
-            sys.exit(1)
+    for trial in range(5):
+        exit_code = run_trial(controller=controller, log_name=logname, max_runtime=1)
+    sys.exit(exit_code)
