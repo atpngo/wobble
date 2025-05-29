@@ -9,6 +9,7 @@ import pybullet_data
 import math
 import numpy as np
 import random
+import datetime
 import control
 
 import numpy as np
@@ -271,8 +272,10 @@ class ControllerWrapper:
 
 
 if __name__ == "__main__":
+    now = datetime.datetime.now()
+    ts = now.strftime("%m_%d_%Y_%H_%M_%S")
+    logger = Logger(f"./logs/PID/trial_{ts}.log", ["timestamp_s", "pitch_degrees"])
     sim = Simulation()
-    logger = Logger("test.log", ["timestamp_s", "pitch_degrees"])
     controller = ControllerWrapper(control.PID(10, 100, 0, dt))
     # controller = ControllerWrapper(control.LQR(1, 2.3))
     # dt = 1 / 60
@@ -285,4 +288,4 @@ if __name__ == "__main__":
         current_time_seconds, state = sim.step()
         logger.write(f"{current_time_seconds},{state['pitch']}")
         if current_time_seconds >= 10:
-            sys.exit(0)
+            break

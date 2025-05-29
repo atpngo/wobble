@@ -12,3 +12,4 @@ robot-software
 **/.gitignore
 !/.gitignore
 **/test.log
+**.mp4
