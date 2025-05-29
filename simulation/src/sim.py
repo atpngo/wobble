@@ -66,11 +66,8 @@ class LQRController:
 URDF_FILEPATH = os.path.join(script_dir, "robot.urdf")
 
 # Simulation params
-FPS = 60
-dt = 1 / FPS
-# max_velocity = 100  # rad/sec prev 5
-# max_force = 0.1  # prev 0.1
-max_velocity = 100
+dt = 0.01
+max_velocity = 50  # radians per second
 max_force = 1
 
 
@@ -84,6 +81,19 @@ def clamp(value, min, max):
     elif value > max:
         return max
     return value
+
+
+class Logger:
+    def __init__(self, filename, header):
+        self.fout = open(filename, "w+")
+        self.write(",".join(header))
+
+    def __del__(self):
+        print("Closing logger...")
+        self.fout.close()
+
+    def write(self, line):
+        self.fout.write(line + "\n")
 
 
 class Robot:
@@ -131,11 +141,14 @@ class Robot:
         velocity = percentage * max_velocity
         left_wheel_velocity = -(velocity + random.uniform(-2, 2))
         right_wheel_velocity = velocity + random.uniform(-1, 1)
+        left_wheel_velocity = -velocity
+        right_wheel_velocity = velocity
 
         # Terminating condition is when the robot tips over
         if abs(self.get("pitch")) > 45.0:
             left_wheel_velocity = 0.0
             right_wheel_velocity = 0.0
+            sys.exit(1)
 
         # Apply wheel force
         p.setJointMotorControl2(
@@ -179,6 +192,10 @@ class Simulation:
             cameraTargetPosition=[0, 0, 0],
         )
         p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+
+        p.setRealTimeSimulation(0)
+        p.setTimeStep(dt)
+
         # Load ground plane
         planeId = p.loadURDF("plane.urdf")
 
@@ -187,7 +204,18 @@ class Simulation:
         self.robotId = p.loadURDF(URDF_FILEPATH, [0, 0, 0.2], initialOrientation)
         self.robot = Robot(self.robotId, initial_pitch=0.2, left_wheel=0, right_wheel=1)
 
+        # Timing
+        self.current_time = 0.0
+        self.time_text_id = p.addUserDebugText(
+            "Time: 0.00",
+            [0.0, 0.0, 0.0],
+            textColorRGB=[1, 1, 1],
+            textSize=1.5,
+            lifeTime=0,
+        )
+
     def step(self):
+        p.stepSimulation()
         # Get robot state
         pitch = self.robot.get("pitch")
 
@@ -202,12 +230,27 @@ class Simulation:
             cameraPitch=-10,
             cameraTargetPosition=self.robot.get_position(),
         )
+        robot_x, robot_y, robot_z = self.robot.get_position()
+        p.addUserDebugText(
+            f"Time: {self.current_time:.2f}s, Pitch: {pitch:.1f} deg",
+            [robot_x - 0.8, robot_y, robot_z + 0.1],
+            textColorRGB=[1, 1, 0],
+            textSize=1.5,
+            lifeTime=0,
+            replaceItemUniqueId=self.time_text_id,
+        )
+        self.current_time += dt
+
+        return self.current_time, self.robot.get_state()
 
 
 # Use the simulation
 class Environment:
-    def __init__(self, timeout=20):
+    def __init__(self, timeout=10):
         self.timeout = timeout
+
+    def step(self, left_wheel_signal, right_wheel_signal):
+        pass
 
 
 class ControllerWrapper:
@@ -229,7 +272,8 @@ class ControllerWrapper:
 
 if __name__ == "__main__":
     sim = Simulation()
-    controller = ControllerWrapper(control.PID(2, 10, 0, dt))
+    logger = Logger("test.log", ["timestamp_s", "pitch_degrees"])
+    controller = ControllerWrapper(control.PID(10, 100, 0, dt))
     # controller = ControllerWrapper(control.LQR(1, 2.3))
     # dt = 1 / 60
     # A = np.array([[1, dt], [0, 1]])
@@ -238,5 +282,5 @@ if __name__ == "__main__":
     # R = np.array([[0.5]])
     # controller = ControllerWrapper(LQRController(A, B, Q, R))
     while True:
-        sim.step()
-        time.sleep(dt)
+        current_time_seconds, state = sim.step()
+        logger.write(f"{current_time_seconds},{state['pitch']}")
