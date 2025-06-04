@@ -12,6 +12,7 @@ import alt_control
 import util
 import numpy as np
 import random
+import time
 
 random.seed(69)
 
@@ -41,6 +42,7 @@ class Robot:
             "left_enc": initial_left_enc,
             "right_enc": initial_right_enc,
             "pitch": initial_pitch,
+            "pitch_rate": 0,
         }
         self.pos = None
         self.ori = None
@@ -64,7 +66,7 @@ class Robot:
         percentage = analog_signal / 255
         return percentage * Configuration.max_velocity
 
-    def update(self, left_motor_signal, right_motor_signal):
+    def set_signal(self, left_motor_signal, right_motor_signal):
         """
         Step through and return state
         """
@@ -93,7 +95,9 @@ class Robot:
             force=Configuration.max_force,
         )
 
+    def update_state(self):
         # Update state
+        old_pitch = self.state["pitch"]
         self.pos, self.ori = p.getBasePositionAndOrientation(self.robot_id)
         robotEuler = p.getEulerFromQuaternion(self.ori)
         pitch = robotEuler[0] * 180 / math.pi
@@ -102,6 +106,7 @@ class Robot:
         self.state["right_enc"] = p.getJointState(self.robot_id, self.right_wheel_idx)[
             0
         ]
+        self.state["pitch_rate"] = (self.state["pitch"] - old_pitch) / Configuration.dt
         return self.state
 
 
@@ -150,9 +155,12 @@ class Simulation:
         return self.current_time, self.robot.get_state()
 
     def step(self, left_motor_signal, right_motor_signal):
+
+        self.robot.set_signal(left_motor_signal, right_motor_signal)
+
         p.stepSimulation()
 
-        self.robot.update(left_motor_signal, right_motor_signal)
+        self.robot.update_state()
 
         p.resetDebugVisualizerCamera(
             cameraDistance=0.5,
@@ -171,6 +179,60 @@ class Simulation:
         )
         self.current_time += Configuration.dt
 
+        return self.get_state()
+
+    def inject_and_step(self, state: dict, left_signal: float, right_signal: float):
+        """
+        state must contain:
+        - "pitch"      in degrees
+        - "pitch_rate" in deg/s
+        - "left_enc"   in rad
+        - "right_enc"  in rad
+        """
+        # 1) Reset the base pose to the same XYZ but desired pitch about X
+        pos, _ = p.getBasePositionAndOrientation(self.robotId)
+        quat = p.getQuaternionFromEuler(
+            [
+                math.radians(state["pitch"]),  # pitch
+                0.0,  # roll
+                0.0,  # yaw
+            ]
+        )
+        p.resetBasePositionAndOrientation(self.robotId, pos, quat)
+
+        # 2) Reset base angular velocity to match pitch_rate (deg/s → rad/s)
+        omega = math.radians(state["pitch_rate"])
+        p.resetBaseVelocity(
+            self.robotId,
+            linearVelocity=[0, 0, 0],
+            angularVelocity=[omega, 0, 0],
+        )
+
+        # 3) Reset each wheel encoder to its angle
+        p.resetJointState(
+            self.robotId,
+            self.robot.left_wheel_idx,
+            state["left_enc"],
+            targetVelocity=0.0,
+        )
+        p.resetJointState(
+            self.robotId,
+            self.robot.right_wheel_idx,
+            state["right_enc"],
+            targetVelocity=0.0,
+        )
+
+        # 4) Issue your control signals
+        self.robot.set_signal(left_signal, right_signal)
+
+        # 5) Step the world forward by one dt
+        p.stepSimulation()
+
+        self.robot.update_state()
+
+        self.current_time += Configuration.dt
+
+        # 6) Return the new sim time & robot state
         return self.get_state()
 
 
@@ -194,7 +256,7 @@ class ControllerWrapper:
 def run_trial(controller, log_name, max_runtime=10, render=True, log_data=True):
     sim = Simulation(render)
     logger = util.Logger(log_name, ["timestamp_s", "pitch_degrees"], log_data=log_data)
-
+    pitch_history = []
     try:
         # Main logic
         current_time_seconds, state = sim.get_state()
@@ -202,7 +264,8 @@ def run_trial(controller, log_name, max_runtime=10, render=True, log_data=True):
         curr_pitch, prev_pitch = state["pitch"], 0
         while True:
             pitch = state["pitch"]
-            d_pitch = pitch - prev_pitch
+            pitch_history.append(pitch)  # record pitch to compute RMSE
+            d_pitch = (pitch - prev_pitch) / Configuration.dt
             prev_pitch = pitch
             signal = controller.get_signal(pitch=pitch, d_pitch=d_pitch, goal_pitch=0)
             left_control_signal = signal
@@ -212,58 +275,18 @@ def run_trial(controller, log_name, max_runtime=10, render=True, log_data=True):
             )
             logger.write(f"{round(current_time_seconds, 3)},{round(state['pitch'],5)}")
             if current_time_seconds >= max_runtime:
-                print("PASS")
-                return 0
+                error = util.rmse(pitch_history)
+                if error < 10:
+                    return 0, error
+                else:
+                    return 1, error
 
             # Terminating conditions
-            if pitch > 45:
-                print("FAIL")
-                return 1
+            if abs(pitch) > 45:
+                return 1, util.rmse(pitch_history)
     finally:
         sim.teardown()
 
 
 if __name__ == "__main__":
-    # PID Controller
-    # controller = ControllerWrapper(control.PID(10, 100, 0, Configuration.dt))
-
-    # LQR Controller
-    # A = np.array([[1, Configuration.dt], [0, 1]])
-    # B = np.array([[0], [Configuration.dt]])
-    # Q = np.diag([1, 1])  # pitch angular position, pitch angular velocity
-    # R = np.array([1])  # output torque
-    # controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
-
-    A = np.array([[1, Configuration.dt], [0, 1]])
-    B = np.array([[0], [Configuration.dt]])
-    grid = {
-        "q1": np.logspace(0, 4, 20),
-        "q2": np.logspace(-1, 3, 20),
-        "r": np.logspace(-4, 2, 20),
-    }
-    # Run trials
-    # for trial in range(3):
-    passes = 0
-    fails = 0
-    for q1 in grid["q1"]:
-        for q2 in grid["q2"]:
-            for r in grid["r"]:
-                print(f"Q=({q1},{q2}) R={r}")
-                Q = np.diag([q1, q2])  # pitch angular position, pitch angular velocity
-                R = np.array([r])  # output torque
-                controller = ControllerWrapper(alt_control.LQRController(A, B, Q, R))
-
-                exit_code = run_trial(
-                    controller=controller,
-                    log_name=util.get_formatted_time_string("../logs"),
-                    max_runtime=5,
-                    render=False,
-                    log_data=False,
-                )
-                if exit_code == 0:
-                    passes += 1
-                else:
-                    fails += 1
-
-    print(f"Ran {passes+fails} trials.\nPasses: {passes}.\nFails:{fails}")
-    sys.exit(exit_code)
+    pass

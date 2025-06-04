@@ -1,6 +1,7 @@
 import random
 import datetime
 import os
+import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -44,3 +45,7 @@ def clamp(value, min, max):
 
 def get_relative_path(path):
     return os.path.join(SCRIPT_DIR, path)
+
+
+def rmse(data):
+    return np.sqrt(np.mean(np.square(data)))
