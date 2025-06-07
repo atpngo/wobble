@@ -18,6 +18,7 @@ struct Command
 {
     int left_wheel_power;
     int right_wheel_power;
+    float trim;
 };
 
 // message types

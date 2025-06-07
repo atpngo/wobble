@@ -46,7 +46,8 @@ void handleIncoming(const esp_now_recv_info_t *esp_now_info, const uint8_t *data
         Serial.println(data_.right_enc);
         display.reset();
         display.printf("Pitch: %.2f\nYaw: %.2f\nL: %d  R: %d\n", data_.pitch, data_.yaw, data_.left_enc, data_.right_enc);
-        display.printf("Dial: %d", dial.read());
+        float trim = dial.read() / 100.0f;
+        display.printf("Dial: %.2f", trim);
         display.printf("Power: %d, %d", left_motor_power, right_motor_power);
         display.update();
     }
@@ -92,10 +93,10 @@ void loop()
     left_motor_power = -left_joystick.get_x() * 255;
     right_motor_power = -right_joystick.get_x() * 255;
     out_.type = Message::Command;
-    Command c{
-        .left_wheel_power = left_motor_power,
-        .right_wheel_power = right_motor_power,
-    };
+    Command c;
+    c.left_wheel_power = left_motor_power;
+    c.right_wheel_power = right_motor_power;
+    c.trim = static_cast<float>(dial.read()) / 100.0f;
     out_.len = sizeof(c);
     memcpy(out_.payload, &c, out_.len);
     socket.send(peer, out_);

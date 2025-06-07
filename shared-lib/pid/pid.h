@@ -5,9 +5,11 @@ class PID
 {
 public:
     PID(double kp, double ki, double kd, double dt);
+    PID(double kp, double ki, double kd);
 
     void reset();
     double get_signal(double current_value, double target);
+    double get_signal(double current_value, double target, double dt);
 
 private:
     double kp_, ki_, kd_;
