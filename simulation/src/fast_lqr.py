@@ -30,7 +30,7 @@ def eval_lqr(param):
         raw = alt_control.LQRController(A, B, Q, R)
     except Exception:
         return None
-    ctrl = sim.ControllerWrapper(raw)
+    ctrl = alt_control.ControllerWrapper(raw)
     code, rmse = sim.run_trial(
         controller=ctrl,
         log_name=None,

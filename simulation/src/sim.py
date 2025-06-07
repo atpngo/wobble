@@ -6,11 +6,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../build"))
 import pybullet as p
 import pybullet_data
 import math
-import numpy as np
-import control
-import alt_control
 import util
-import numpy as np
 import random
 import time
 
@@ -113,7 +109,9 @@ class Robot:
 class Simulation:
     def __init__(self, render):
         # Initialize PyBullet
-        physicsClient = p.connect(p.GUI if render else p.DIRECT)
+        if p.isConnected():
+            p.disconnect()
+        self.client = p.connect(p.GUI if render else p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         p.setRealTimeSimulation(1)
@@ -149,7 +147,8 @@ class Simulation:
         )
 
     def teardown(self):
-        p.disconnect()
+        if p.isConnected():
+            p.disconnect(self.client)
 
     def get_state(self):
         return self.current_time, self.robot.get_state()
@@ -236,26 +235,13 @@ class Simulation:
         return self.get_state()
 
 
-class ControllerWrapper:
-    def __init__(self, controller):
-        self.controller = controller
-        self.type = type(controller)
-
-    def get_signal(self, **kwargs):
-        if self.type == control.PID:
-            current_pitch, goal_pitch = kwargs["pitch"], kwargs["goal_pitch"]
-            return self.controller.get_signal(current_pitch, goal_pitch)
-        elif self.type == alt_control.LQRController:
-            pitch, delta_pitch = kwargs["pitch"], kwargs["d_pitch"]
-            return (self.controller.control(np.asarray([pitch, delta_pitch])))[0]
-        elif self.type == control.LQR:
-            pitch, delta_pitch = kwargs["pitch"], kwargs["d_pitch"]
-            return self.controller.compute(pitch, delta_pitch)
-
-
 def run_trial(controller, log_name, max_runtime=10, render=True, log_data=True):
     sim = Simulation(render)
-    logger = util.Logger(log_name, ["timestamp_s", "pitch_degrees"], log_data=log_data)
+    logger = util.Logger(
+        log_name,
+        ["timestamp_s", "pitch_degrees", "control_latency_microseconds"],
+        log_data=log_data,
+    )
     pitch_history = []
     try:
         # Main logic
@@ -267,13 +253,19 @@ def run_trial(controller, log_name, max_runtime=10, render=True, log_data=True):
             pitch_history.append(pitch)  # record pitch to compute RMSE
             d_pitch = (pitch - prev_pitch) / Configuration.dt
             prev_pitch = pitch
+
+            before = time.time()
             signal = controller.get_signal(pitch=pitch, d_pitch=d_pitch, goal_pitch=0)
+            after = time.time()
+
             left_control_signal = signal
             right_control_signal = signal
             current_time_seconds, state = sim.step(
                 left_control_signal, right_control_signal
             )
-            logger.write(f"{round(current_time_seconds, 3)},{round(state['pitch'],5)}")
+            logger.write(
+                f"{round(current_time_seconds, 3)},{round(state['pitch'],5)},{1e6*(after-before):.2f}"
+            )
             if current_time_seconds >= max_runtime:
                 error = util.rmse(pitch_history)
                 if error < 10:
