@@ -40,7 +40,7 @@ def main():
     if args.controller == "lqr":
         core = alt_control.LQRController(A, B, Q, R)
     elif args.controller == "mpc":
-        N = 10
+        N = 3
         core = alt_control.MPCController(A, B, Q, R, N)
     else:  # pid
         # PID(Kp, Ki, Kd, dt)
@@ -60,7 +60,7 @@ def main():
             log_data=True,
         )
         print(
-            f"[{args.controller.upper()}] Trial {i}: exit={exit_code}, rmse={error:.3f}"
+            f"[{args.controller.upper()}] Trial {i}: result={'FAIL' if exit_code == 1 else 'PASS'}, rmse={error:.3f}"
         )
 
 
