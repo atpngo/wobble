@@ -1,8 +1,3 @@
-import sys, os
-
-script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../build"))
-
 import pybullet as p
 import pybullet_data
 import math

@@ -1,7 +1,6 @@
 from scipy.linalg import solve_discrete_are
 import numpy as np
 import cvxpy as cp
-import control
 
 
 class ControllerWrapper:
@@ -10,9 +9,9 @@ class ControllerWrapper:
         self.type = type(controller)
 
     def get_signal(self, **kwargs):
-        if self.type == control.PID:
+        if self.type == PIDController:
             current_pitch, goal_pitch = kwargs["pitch"], kwargs["goal_pitch"]
-            return self.controller.get_signal(current_pitch, goal_pitch)
+            return -self.controller.get_signal(current_pitch, goal_pitch)
         elif self.type == LQRController:
             pitch, delta_pitch = kwargs["pitch"], kwargs["d_pitch"]
             return (self.controller.control(np.asarray([pitch, delta_pitch])))[0]
@@ -21,14 +20,52 @@ class ControllerWrapper:
             return self.controller.control(np.asarray([pitch, delta_pitch]))
 
 
-class LQRController:
+class PIDController:
     """
-    Discrete-time LQR:
-      minimize sum (x'Qx + u'Ru)
-      s.t. x_{k+1} = A x_k + B u_k
+    A simple PID controller.
 
-    u_k = -K x_k
+    kp, ki, kd: PID gains
+    dt: default timestep
     """
+
+    def __init__(self, kp, ki, kd, dt=0.01):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.dt = dt
+
+        self.integral = 0.0
+        self.prev_error = 0.0
+        self.output = 0.0
+
+    def reset(self):
+        self.integral = 0.0
+        self.prev_error = 0.0
+        self.output = 0.0
+
+    def get_signal(self, current_value, target, dt=None):
+        dt = self.dt if dt is None else dt
+        error = target - current_value
+
+        # Proportional term
+        p = self.kp * error
+
+        # Integral term
+        self.integral += error * dt
+        i = self.ki * self.integral
+
+        # Derivative term
+        derivative = (error - self.prev_error) / dt
+        d = self.kd * derivative
+
+        # PID output
+        self.output = p + i + d
+        self.prev_error = error
+
+        return self.output
+
+
+class LQRController:
 
     def __init__(self, A, B, Q=None, R=None):
         self.A = np.asarray(A)
@@ -36,13 +73,9 @@ class LQRController:
         n = self.A.shape[0]
         m = self.B.shape[1]
 
-        # defaults if you don’t pass Q/R
         self.Q = np.eye(n) if Q is None else np.asarray(Q)
         self.R = np.eye(m) if R is None else np.asarray(R)
-
-        # solve discrete‐time ARE: Aᵀ P A − P − (Aᵀ P B)(R + Bᵀ P B)⁻¹(Bᵀ P A) + Q = 0
         P = solve_discrete_are(self.A, self.B, self.Q, self.R)
-        # compute K = (R + Bᵀ P B)⁻¹ (Bᵀ P A)
         self.K = np.linalg.inv(self.R + self.B.T @ P @ self.B) @ (self.B.T @ P @ self.A)
 
     def control(self, x):
@@ -53,27 +86,8 @@ class LQRController:
         x = np.asarray(x).reshape(-1)
         return -self.K @ x
 
-    def update_model(self, A=None, B=None, Q=None, R=None):
-        """
-        If you want to re-tune with new A/B/Q/R:
-        """
-        if A is not None:
-            self.A = np.asarray(A)
-        if B is not None:
-            self.B = np.asarray(B)
-        if Q is not None:
-            self.Q = np.asarray(Q)
-        if R is not None:
-            self.R = np.asarray(R)
-        # recompute K
-        self.__init__(self.A, self.B, self.Q, self.R)
-
 
 class MPCController:
-    """
-    Finite‐horizon MPC for x_{k+1}=A x_k + B u_k
-    """
-
     def __init__(self, A, B, Q, R, N, x_min=None, x_max=None, u_min=None, u_max=None):
         self.A, self.B = np.asarray(A), np.asarray(B)
         self.Q, self.R, self.N = Q, R, N

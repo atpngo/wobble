@@ -14,3 +14,4 @@ robot-software
 **/test.log
 **.mp4
 **/__pycache__
+**/trials*

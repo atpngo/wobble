@@ -1,7 +1,6 @@
 import sim
 import argparse
 import numpy as np
-import control
 import util
 import alt_control
 
@@ -45,7 +44,7 @@ def main():
     else:  # pid
         # PID(Kp, Ki, Kd, dt)
         dt = sim.Configuration.dt
-        core = control.PID(10, 100, 0, dt)
+        core = alt_control.PIDController(10, 100, 0, dt)
 
     controller = alt_control.ControllerWrapper(core)
 
