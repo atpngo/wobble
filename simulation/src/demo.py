@@ -4,6 +4,8 @@ import numpy as np
 import util
 import alt_control
 
+# An "all-in-one" script to showcase demonstrations of each controller.
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -28,21 +30,19 @@ def main():
     parser.add_argument("--log-dir", default="../logs", help="where to write csv logs")
     args = parser.parse_args()
 
-    # common system matrices for LQR & MPC
+    # common system matrices for LQR/MPC
     A = np.array([[1.13995933, 7.92979201e-03], [1.14849707e02, 8.52681033e-01]])
     B = np.array([[-0.01098], [-1.104045]])
     q1, q2, r = 670, 110, 1000
     Q = np.diag([q1, q2])
     R = np.eye(1) * r
 
-    # build controller wrapper
     if args.controller == "lqr":
         core = alt_control.LQRController(A, B, Q, R)
     elif args.controller == "mpc":
         N = 3
         core = alt_control.MPCController(A, B, Q, R, N)
     else:  # pid
-        # PID(Kp, Ki, Kd, dt)
         dt = sim.Configuration.dt
         core = alt_control.PIDController(10, 100, 0, dt)
 

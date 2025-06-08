@@ -18,7 +18,9 @@ def identify_system(n_samples=2000):
     X, U, Y = [], [], []
 
     for _ in range(n_samples):
-        x0 = np.random.uniform([-5, -50], [5, 50])  # ±5° pitch, ±50°/s
+        x0 = np.random.uniform(
+            [-5, -50], [5, 50]
+        )  # initialize random starting angle and angular velocity
         u = np.random.uniform(-255, 255)
         x1 = f_step(env, x0, u)
         X.append(x0)

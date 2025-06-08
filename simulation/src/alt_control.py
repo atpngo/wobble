@@ -2,6 +2,8 @@ from scipy.linalg import solve_discrete_are
 import numpy as np
 import cvxpy as cp
 
+# This file is responsible for implementing PID, LQR, and MPC controllers.
+
 
 class ControllerWrapper:
     def __init__(self, controller):
