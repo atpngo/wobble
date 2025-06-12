@@ -18,6 +18,16 @@
 `wireless-controller`
 - Contains all the files for the wireless transceiver used to communicate with the robot via the ESP-NOW protocol
 
+## Important Files
+`onboard-software/src/main.cpp`
+- This is the main file that the physical robot is running on. If you look at the `BalanceTask()`, this is the main "loop" that the robot uses to balance itself.
+
+`simulation/src/sim.py`
+- This file is the "environment" I used to test all the control algorithms. Here, you can see how I injected noise into my sensor readings and actuator commands.
+
+`simulation/src/demo.py`
+- This file actually instantiates the controllers and runs them inside the simulation. Additionally, it provides renders of the robot so you can see what it looks like while it tries to balance.
+
 ## Build Instructions
 #### 1. Make a virtual env
 ```
