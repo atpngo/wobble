@@ -44,7 +44,7 @@ Command data_;
 //
 // Controller
 //
-PID controller(10.0, 0.0, 0.0);
+PID controller(10, 12, 0.4);
 portMUX_TYPE trimMux = portMUX_INITIALIZER_UNLOCKED;
 volatile float trim_ = 0.0f;
 
@@ -82,18 +82,20 @@ void BalanceTask(void *pvParameters)
         now = millis();
         dt = now - prev_time;
         prev_time = now;
+        float dt_s = dt / 1000.0f;
 
         // Update IMU
         imu.calculateAngles();
         float pitch = imu.get_pitch() + getTrim();
+        Serial.println(pitch);
 
-        double signal = controller.get_signal(pitch, 0, dt);
+        double signal = controller.get_signal(pitch, 0, dt_s);
         int sign = (signal >= 0) ? 1 : -1;
-        signal = sign * (abs(signal) + 40); // off offset
+        signal = sign * (abs(signal) + 20); // off offset
         int power = std::clamp(int(signal), -255, 255);
         left_motor.spin(power);
         right_motor.spin(power);
-        vTaskDelay(pdMS_TO_TICKS(1)); // 200 Hz
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
 
